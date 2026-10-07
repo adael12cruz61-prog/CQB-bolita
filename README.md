@@ -48,6 +48,8 @@ Otras teclas en local: `0` reinicia, `Esc` vuelve a elegir personaje.
 
 ## Reglas rápidas
 
+
+
 - 3 vidas de 100 de salud. Bala a 5 m/s (1 casilla = 1 m).
 - Daño: disparos 20 · torreta 10 · granada 99 · cable 60 · mina 200 · sin balas, tocar a alguien le quita 1 de vida cada 0.1 s.
 - Pistola y escopeta (5 perdigones en cono, medio ritmo, gasta 5 balas por disparo). 3 cargadores de 10 balas, recarga de 3 s.
