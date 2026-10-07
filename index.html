@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Círculos CQB</title>
+<style>
+:root{
+  box-sizing:border-box;
+  --bg:#f1efe9; --fg:#1c1c1c; --card:#ffffff; --mut:#666; --line:#d8d4ca; --acc:#2e7dff;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#0f1012; --fg:#e9e9e9; --card:#1a1c20; --mut:#9a9a9a; --line:#2b2e34; }
+}
+:root[data-theme="dark"]{ --bg:#0f1012; --fg:#e9e9e9; --card:#1a1c20; --mut:#9a9a9a; --line:#2b2e34; }
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
+button{font:inherit;font-size:14px;padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+input{font:inherit;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);min-width:0}
+kbd{background:var(--bg);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 6px;font-size:12px;font-family:inherit}
+
+/* ---------- Menú ---------- */
+#menu{display:none;position:fixed;inset:0;z-index:100;background:var(--bg);align-items:center;justify-content:center;padding:16px;overflow:auto;
+  padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+body.in-menu #menu{display:flex}
+body.in-menu #app{display:none}
+.mbox{width:min(94vw,460px);background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px;margin:auto}
+.mbox h2{margin:0;text-align:center;font-size:22px}
+.mp{display:flex;flex-direction:column;gap:12px}
+.mp[hidden]{display:none}
+.big{font-size:16px;font-weight:600;padding:14px;border-radius:12px;text-align:left}
+.big small{display:block;color:var(--mut);font-weight:400;font-size:12px;margin-top:2px}
+.sect{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.seg{display:flex;gap:6px;align-items:center}
+.seg button.sel{background:var(--acc);color:#fff;border-color:var(--acc)}
+#iCode{text-align:center;letter-spacing:.35em;font-size:22px;text-transform:uppercase}
+.codeBox{text-align:center;color:var(--mut);font-size:13px}
+#codeText{font-size:40px;font-weight:700;letter-spacing:.3em;margin:4px 0 8px;color:var(--fg);padding-left:.3em}
+.prow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+.prow.empty{opacity:.5;border-style:dashed}
+.dot{width:14px;height:14px;border-radius:50%;flex:none}
+.pname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick{display:flex;gap:6px}
+.pick button{width:42px;height:42px;padding:2px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.pick button.sel{outline:3px solid var(--acc)}
+.pick img{max-width:100%;max-height:100%;image-rendering:pixelated}
+.pick .circ{width:22px;height:22px;border-radius:50%}
+.chip{width:34px;height:34px;display:flex;align-items:center;justify-content:center}
+.chip img{max-width:100%;max-height:100%;image-rendering:pixelated}
+.status{min-height:18px;font-size:13px;color:var(--mut);text-align:center}
+.status.bad{color:#d33}
+
+/* ---------- Juego ---------- */
+#app{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px;padding-top:calc(12px + env(safe-area-inset-top,0px));padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+h1{font-size:18px;margin:4px 0 0;font-weight:600}
+canvas{display:block;width:100%;height:auto;aspect-ratio:2/1;background:#000;border-radius:10px;border:1px solid var(--line)}
+.stage{position:relative;width:100%;max-width:1280px;--u:.5px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#touch,#sys{position:absolute;inset:0;pointer-events:none;display:none}
+body.touch #touch,body.touch #sys{display:block}
+.tb{position:absolute;pointer-events:auto;box-sizing:border-box;border-radius:50%;border:2px solid rgba(255,255,255,.55);
+  background:rgba(20,22,26,.42);color:#fff;display:flex;align-items:center;justify-content:center;line-height:1;
+  touch-action:none;-webkit-user-select:none;user-select:none;opacity:.88;cursor:pointer}
+.tb.on{background:rgba(255,255,255,.38)}
+.tb.fire{background:rgba(255,60,60,.38);border-color:rgba(255,130,130,.95)}
+.tb.sysb{background:rgba(20,22,26,.6)}
+.jz{position:absolute;pointer-events:auto;touch-action:none}
+.jb,.jk{position:absolute;pointer-events:none;border-radius:50%;border:2px solid rgba(255,255,255,.6)}
+.jb{background:rgba(255,255,255,.08)}
+.jk{background:rgba(255,255,255,.4)}
+.panel{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:1280px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;line-height:1.75}
+.card b{display:block;margin-bottom:2px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;color:var(--mut);font-size:13px;max-width:1280px;text-align:center}
+.rotate,.touch-help{display:none}
+@media (max-width:700px){.panel{grid-template-columns:1fr}}
+
+/* celular */
+body.touch #app{padding:0;gap:0;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+body.touch h1,body.touch .panel,body.touch .row{display:none}
+body.touch .stage{width:min(100vw,200vh);max-width:none}
+body.touch canvas{border-radius:0;border:0}
+@supports (height:100dvh){ body.touch .stage{width:min(100vw,200dvh)} }
+body.touch .touch-help{display:block;margin:10px;max-width:700px;font-size:14px;line-height:1.7}
+@media (orientation:portrait){ body.touch.m-local .rotate{display:block;margin:10px;padding:10px 14px;border-radius:10px;background:#ffd84d;color:#222;font-weight:600;text-align:center} }
+
+/* en línea: cada persona ve el juego a pantalla completa */
+body.m-online{overflow:hidden}
+body.m-online #app{padding:0;gap:0}
+body.m-online h1,body.m-online .panel,body.m-online .row,body.m-online .rotate,body.m-online .touch-help{display:none !important}
+body.m-online .stage{position:fixed;inset:0;width:100vw;height:100vh;max-width:none;z-index:5;background:#000}
+@supports (height:100dvh){ body.m-online .stage{height:100dvh} }
+body.m-online canvas{width:100%;height:100%;aspect-ratio:auto;border-radius:0;border:0}
+</style>
+</head>
+<body class="in-menu">
+
+<div id="menu">
+  <div class="mbox">
+    <h2>Círculos CQB</h2>
+    <div id="pMain" class="mp">
+      <button class="big" id="bLocal">👥 Jugar local<small>2 jugadores en el mismo dispositivo (pantalla dividida)</small></button>
+      <button class="big" id="bOnline">🌐 Jugar en línea<small>Hasta 4 jugadores, cada uno en su dispositivo, con un código de sala</small></button>
+    </div>
+    <div id="pOnline" class="mp" hidden>
+      <label>Tu nombre<br><input id="iName" maxlength="12" placeholder="Jugador" autocomplete="off" style="width:100%"></label>
+      <div class="sect">
+        <b>Crear una sala</b>
+        <div class="seg" id="segMax"><span>Jugadores máximo:</span>
+          <button data-n="2">2</button><button data-n="3">3</button><button data-n="4" class="sel">4</button></div>
+        <button class="big" id="bCreate">Crear sala<small>Te daremos un código para compartir</small></button>
+      </div>
+      <div class="sect">
+        <b>Unirse a una sala</b>
+        <input id="iCode" maxlength="5" placeholder="CÓDIGO" autocapitalize="characters" autocomplete="off" spellcheck="false">
+        <button class="big" id="bJoin">Unirse</button>
+      </div>
+      <button id="bBack1">← Volver</button>
+    </div>
+    <div id="pLobby" class="mp" hidden>
+      <div class="codeBox">Código de la sala<div id="codeText">·····</div>
+        <div id="shareBtns"><button id="bCopy">Copiar código</button> <button id="bShare">Compartir enlace</button></div></div>
+      <div id="lobbyList" class="mp" style="gap:8px"></div>
+      <div id="lobbyInfo" class="status"></div>
+      <button class="big" id="bStart">Iniciar partida</button>
+      <button id="bLeave">Salir de la sala</button>
+    </div>
+    <div id="mStatus" class="status"></div>
+  </div>
+</div>
+
+<div id="app">
+<h1>Círculos CQB</h1>
+<div class="rotate">📱 Gira tu celular en horizontal para jugar</div>
+<div class="stage" id="stage">
+  <canvas id="c" width="1280" height="640"></canvas>
+  <div id="touch"></div>
+  <div id="sys"></div>
+</div>
+<div class="card touch-help"><b>Controles táctiles</b>
+  <b style="display:inline">Joystick</b> para moverte (el cono apunta hacia donde caminas) y botones: 🔥 disparar, ↻ recargar, 🔫 pistola/escopeta, 💣 granada, ➕ botiquín guardado, 🧵 cable (toca en el punto A, camina y toca otra vez en el punto B), 🏗 torreta, ⛏ mina.
+  En local cada jugador usa su mitad de la pantalla. ⛶ = pantalla completa, ☰ = menú. En iPhone, para pantalla completa usa Compartir → «Agregar a pantalla de inicio».</div>
+<div class="panel">
+  <div class="card"><b style="color:#4da3ff">Jugador 1 (local)</b>
+    Mover: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · Disparar: <kbd>E</kbd> · Recargar: <kbd>Q</kbd><br>
+    Granada: <kbd>R</kbd> · Cable: <kbd>F</kbd> (punto A, camina, <kbd>F</kbd> otra vez = punto B) · Torreta: <kbd>G</kbd><br>
+    Pistola / escopeta: <kbd>T</kbd> · Usar botiquín guardado: <kbd>X</kbd> · Mina: <kbd>C</kbd></div>
+  <div class="card"><b style="color:#ff9f43">Jugador 2 (local)</b>
+    Mover: flechas · Disparar: <kbd>-</kbd> · Recargar: <kbd>.</kbd><br>
+    Granada: <kbd>,</kbd> · Cable: <kbd>M</kbd> (punto A, camina, <kbd>M</kbd> otra vez = punto B) · Torreta: <kbd>N</kbd><br>
+    Pistola / escopeta: <kbd>B</kbd> · Usar botiquín guardado: <kbd>V</kbd> · Mina: <kbd>K</kbd></div>
+</div>
+<div class="panel">
+  <div class="card"><b>En línea (cada quien en su pantalla)</b>
+    Mover: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> o flechas · Disparar: <kbd>E</kbd>, <kbd>-</kbd> o <kbd>Espacio</kbd><br>
+    Recargar <kbd>Q</kbd> · Granada <kbd>R</kbd> · Cable <kbd>F</kbd> · Torreta <kbd>G</kbd> · Arma <kbd>T</kbd> · Botiquín <kbd>X</kbd> · Mina <kbd>C</kbd><br>
+    Todos contra todos: gana el último que quede con vidas.</div>
+  <div class="card"><b>Daño, vida y objetos</b>
+    3 vidas de 100 de salud · disparos 20 · torreta 10 · granada 99 · cable 60 · mina 200 · sin balas: tocar = 1 de vida cada 0.1 s<br>
+    Objetos en el mapa (solo los ves en tu cono): ➕ botiquín, 🦺 chaleco, 🧵 cable, 🔫 torreta, 💣 mina. Globos morado y verde: armas especiales (se ven siempre).</div>
+</div>
+<div class="row">
+  <span>Escala: 1 casilla = 1 m · mapa 60 × 40 m · bala 5 m/s · Reiniciar: <kbd>0</kbd> · Elegir personaje: <kbd>Esc</kbd></span>
+  <button id="rb">Reiniciar (0)</button>
+  <button id="hb">Elegir personaje (Esc)</button>
+  <button id="mb">Menú principal</button>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" onerror="var s=document.createElement('script');s.src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';document.head.appendChild(s)"></script>
+<script>
+(() => {
+'use strict';
+// =====================================================================
+//  CONFIGURACIÓN DE RED (modo en línea con WebRTC a través de PeerJS)
+// =====================================================================
+const NET = {
+  PREFIX: 'circulos-cqb-',                       // prefijo del id en el servidor de señalización
+  CODE_LEN: 5,
+  CODE_CHARS: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', // sin 0/O/1/I para evitar confusiones
+  SNAP_HZ: 20,                                   // veces por segundo que el anfitrión envía el estado
+  INPUT_HZ: 30,                                  // veces por segundo que cada cliente envía sus controles
+  PEER_OPTIONS: {
+    debug: 1,
+    config: { iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' }
+      // Si alguien no logra conectarse (redes muy restrictivas) agrega aquí un servidor TURN:
+      // { urls: 'turn:TU_SERVIDOR:3478', username: 'usuario', credential: 'clave' }
+    ] }
+    // Para usar tu propio servidor PeerJS: host: 'tu-servidor.com', port: 443, secure: true, path: '/'
+  }
+};
+
+const el = id => document.getElementById(id);
+const body = document.body;
+const cv = el('c');
+const ctx = cv.getContext('2d');
+let FX = 1, HS = 1;   // FX: sombras (se apagan en celular), HS: escala del HUD
+if (window.matchMedia && matchMedia('(pointer: coarse)').matches){
+  body.classList.add('touch'); FX = 0; HS = 1.45;
+}
+addEventListener('touchstart', () => {
+  if (!body.classList.contains('touch')){ body.classList.add('touch'); FX = 0; HS = 1.45; buildTouch(); }
+}, { once: true, passive: true });
+const touchMode = () => body.classList.contains('touch');
+
+// =====================================================================
+//  CONSTANTES DEL JUEGO
+// =====================================================================
+const T = 40;                       // 1 metro = 40 px
+const COLS = 60, ROWS = 40;
+const R = 16;
+const SPEED = 2.5 * T;
+const BULLET = 5 * T;
+const TURN_SPEED = 14;
+const FOV = 100 * Math.PI / 180;
+const RANGE = 300;
+const NEAR = 44;
+const MAG_SIZE = 10, RESERVE_MAGS = 2, RELOAD_TIME = 3, PISTOL_CD = 0.5;
+const SHOT_PELLETS = 5, SHOT_CD = PISTOL_CD * 2, SHOT_HALF = Math.atan(0.25);
+const COUNTDOWN = 3;
+const MELEE_TICK = 0.1, HEAL_TIME = 5, MAX_MEDKITS = 2;
+const MAX_MINES = 2, MINE_RADIUS = 60, DMG_MINE = 200, MINE_ARM = 1;
+const MAX_LIVES = 3, HP_MAX = 100;
+const DMG_SHOT = 20, DMG_TURRET = 10, DMG_GRENADE = 99, DMG_WIRE = 60;
+const VEST_REDUCE = 0.3;
+const START_NADES = 2, MAX_WIRES = 2, MAX_TURRETS = 2;
+const GREN_SPEED = 7 * T, GREN_FRICTION = 1.3, GREN_FUSE = 2.5, GREN_RADIUS = 100, WIRE_RADIUS = 70;
+const WIRE_MAX = 8 * T, WIRE_MIN = 24;
+const TURRET_LIFE = 30, TURRET_RATE = 2, TURRET_RANGE = 8 * T, TURRET_HP = 60, TURRET_TURN = 5;
+const SPECIAL_RESPAWN = 20;
+const PICKS = {
+  med:    { every: 10, max: 3, move: 15 },
+  vest:   { every: 20, max: 2, move: 15 },
+  wire:   { every: 15, max: 2, move: 15 },
+  turret: { every: 20, max: 2, move: 15 },
+  mine:   { every: 25, max: 1, move: 15 }
+};
+const EDGES = ['nade', 'wire', 'turret', 'mine', 'heal', 'swap'];
+
+// tamaño de cada vista y del escenario (cambia en el modo en línea)
+let VW = 640, VH = 640;
+let LW = 1280, LH = 640;
+
+// =====================================================================
+//  SPRITES
+// =====================================================================
+function loadImg(src){ const i = new Image(); i.src = src; return i; }
+const CHARS = [
+  { id: 'circle', name: 'Círculo', img: null, face: 0, size: 0 },
+  { id: 'rem',    name: 'Rem',     img: loadImg('data:image/png;base64,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'),    face: Math.PI / 2, size: 46 },
+  { id: 'hisoka', name: 'Hisoka',  img: loadImg('data:image/png;base64,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'), face: Math.PI / 2, size: 54 }
+];
+const imgOk = ch => ch.img && ch.img.complete && ch.img.naturalWidth > 0;
+
+// =====================================================================
+//  MAPA (base 30x20 espejada a 60x40)
+// =====================================================================
+const base = Array.from({length: 20}, () => new Array(30).fill(0));
+function bwall(x1, y1, x2, y2){
+  for (let y = y1; y <= y2; y++) for (let x = x1; x <= x2; x++) base[y][x] = 1;
+}
+bwall(0,0,29,0); bwall(0,19,29,19); bwall(0,0,0,19); bwall(29,0,29,19);
+bwall(10,1,10,8); bwall(10,11,10,18);
+bwall(20,1,20,5); bwall(20,8,20,13); bwall(20,16,20,18);
+bwall(1,6,3,6); bwall(5,6,9,6);
+bwall(1,13,4,13); bwall(6,13,9,13);
+bwall(21,7,24,7); bwall(26,7,28,7);
+bwall(21,12,24,12); bwall(27,12,28,12);
+bwall(14,4,15,5); bwall(14,14,15,15); bwall(13,9,16,10);
+
+const grid = Array.from({length: ROWS}, (_, y) =>
+  Array.from({length: COLS}, (_, x) => base[y < 20 ? y : 39 - y][x < 30 ? x : 59 - x]));
+for (const y of [3,4,9,10,15,16,23,24,29,30,35,36]){ grid[y][29] = 0; grid[y][30] = 0; }
+for (const x of [4,5,14,15,24,25,34,35,44,45,54,55]){ grid[19][x] = 0; grid[20][x] = 0; }
+
+const solidT = (tx, ty) => tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS || grid[ty][tx] === 1;
+const solidP = (x, y) => solidT(Math.floor(x / T), Math.floor(y / T));
+
+const segs = [];
+for (let ty = 0; ty < ROWS; ty++) for (let tx = 0; tx < COLS; tx++) {
+  if (!grid[ty][tx]) continue;
+  const x = tx * T, y = ty * T;
+  if (!solidT(tx, ty - 1)) segs.push([x, y, x + T, y]);
+  if (!solidT(tx, ty + 1)) segs.push([x, y + T, x + T, y + T]);
+  if (!solidT(tx - 1, ty)) segs.push([x, y, x, y + T]);
+  if (!solidT(tx + 1, ty)) segs.push([x + T, y, x + T, y + T]);
+}
+function nearSegs(x, y, r){
+  const out = [];
+  for (const s of segs){
+    const minx = Math.min(s[0], s[2]) - r, maxx = Math.max(s[0], s[2]) + r;
+    const miny = Math.min(s[1], s[3]) - r, maxy = Math.max(s[1], s[3]) + r;
+    if (x >= minx && x <= maxx && y >= miny && y <= maxy) out.push(s);
+  }
+  return out;
+}
+function rayDist(ox, oy, dx, dy, max, list){
+  list = list || segs;
+  let best = max;
+  for (let i = 0; i < list.length; i++){
+    const s = list[i];
+    const sx = s[2] - s[0], sy = s[3] - s[1];
+    const den = dx * sy - dy * sx;
+    if (Math.abs(den) < 1e-9) continue;
+    const px = s[0] - ox, py = s[1] - oy;
+    const t = (px * sy - py * sx) / den;
+    if (t < 0 || t >= best) continue;
+    const u = (px * dy - py * dx) / den;
+    if (u >= 0 && u <= 1) best = t;
+  }
+  return best;
+}
+function los(x1, y1, x2, y2){
+  const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy);
+  if (d < 1) return true;
+  return rayDist(x1, y1, dx / d, dy / d, d) >= d - 1;
+}
+function hitsWall(x, y, r){
+  const x0 = Math.floor((x - r) / T), x1 = Math.floor((x + r) / T);
+  const y0 = Math.floor((y - r) / T), y1 = Math.floor((y + r) / T);
+  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++){
+    if (!solidT(tx, ty)) continue;
+    const cx = Math.max(tx * T, Math.min(x, tx * T + T));
+    const cy = Math.max(ty * T, Math.min(y, ty * T + T));
+    if ((x - cx) ** 2 + (y - cy) ** 2 < r * r) return true;
+  }
+  return false;
+}
+const floorTiles = [];
+(function(){
+  const seen = new Uint8Array(COLS * ROWS);
+  const st = [[2, 2]]; seen[2 * COLS + 2] = 1;
+  while (st.length){
+    const [x, y] = st.pop();
+    floorTiles.push([x, y]);
+    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const nx = x + dx, ny = y + dy;
+      if (solidT(nx, ny) || seen[ny * COLS + nx]) continue;
+      seen[ny * COLS + nx] = 1; st.push([nx, ny]);
+    }
+  }
+})();
+
+// =====================================================================
+//  JUGADORES, CONTROLES Y ESTADO
+// =====================================================================
+const SLOTS = [   // 4 esquinas del mapa
+  { color: '#4da3ff', sx: 2.5,  sy: 2.5,  aim0: 0 },
+  { color: '#ff9f43', sx: 57.5, sy: 37.5, aim0: Math.PI },
+  { color: '#5be37d', sx: 57.5, sy: 2.5,  aim0: Math.PI },
+  { color: '#d77bff', sx: 2.5,  sy: 37.5, aim0: 0 }
+];
+const P1_CTL = { up:['KeyW'], down:['KeyS'], left:['KeyA'], right:['KeyD'], shoot:['KeyE'], reload:['KeyQ'],
+  nade:['KeyR'], wire:['KeyF'], turret:['KeyG'], swap:['KeyT'], heal:['KeyX'], mine:['KeyC'] };
+const P2_CTL = { up:['ArrowUp'], down:['ArrowDown'], left:['ArrowLeft'], right:['ArrowRight'],
+  shoot:['Minus','Slash'], reload:['Period','NumpadDecimal'],
+  nade:['Comma'], wire:['KeyM'], turret:['KeyN'], swap:['KeyB'], heal:['KeyV'], mine:['KeyK'] };
+const ONLINE_CTL = { up:['KeyW','ArrowUp'], down:['KeyS','ArrowDown'], left:['KeyA','ArrowLeft'], right:['KeyD','ArrowRight'],
+  shoot:['KeyE','Minus','Slash','Space'], reload:['KeyQ','Period'],
+  nade:['KeyR','Comma'], wire:['KeyF','KeyM'], turret:['KeyG','KeyN'], swap:['KeyT','KeyB'], heal:['KeyX','KeyV'], mine:['KeyC','KeyK'] };
+const DEFAULT_CHAR = [1, 2, 0, 1];
+
+const specials = {
+  mg: { name:'Ametralladora', ammo:100, cd:0.2, color:'#b26cff', label:'100', x:0, y:0, state:'cooldown', t:0 },
+  rb: { name:'Pistola de rebote', ammo:5, cd:0.6, color:'#3ddc84', label:'5', x:0, y:0, state:'cooldown', t:0 }
+};
+
+let players = [];
+let bullets = [], grenades = [], explosions = [], wires = [], turrets = [], mines = [], pickups = [];
+let pickTimers = {};
+let clock = 0, countT = 0, goT = 0;
+let mode = 'menu';     // 'menu' | 'local' | 'host' | 'client'
+let state = 'menu';    // 'menu' | 'lobby' | 'hub' | 'count' | 'play' | 'over'
+let winner = null;
+let myIndex = 0;
+
+function makePlayer(i, ctl){
+  const s = SLOTS[i];
+  return {
+    i, name: 'J' + (i + 1), label: 'JUGADOR ' + (i + 1), color: s.color,
+    sx: s.sx * T, sy: s.sy * T, aim0: s.aim0, x: s.sx * T, y: s.sy * T, aim: s.aim0,
+    char: DEFAULT_CHAR[i], ready: false,
+    hubKeys: i === 0 ? 'A / D cambiar · E confirmar' : '← / → cambiar · - confirmar',
+    ctl, remote: false, netIn: null, joy: null, dead: false
+  };
+}
+function newNetIn(){ return { c: { mx: 0, my: 0, sp: 0, shoot: false, reload: false }, e: {} }; }
+
+const alivePlayers = () => players.filter(p => !p.dead);
+const othersOf = p => players.filter(q => q !== p && !q.dead);
+const unarmed = p => !p.special && p.mag <= 0 && p.reserve <= 0 && p.reload <= 0;
+const angNorm = a => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
+
+function randomSpot(minDist){
+  const al = alivePlayers();
+  for (let i = 0; i < 80; i++){
+    const [tx, ty] = floorTiles[Math.floor(Math.random() * floorTiles.length)];
+    const x = (tx + 0.5) * T, y = (ty + 0.5) * T;
+    if (al.every(p => Math.hypot(p.x - x, p.y - y) > minDist)) return { x, y };
+  }
+  const [tx, ty] = floorTiles[Math.floor(Math.random() * floorTiles.length)];
+  return { x: (tx + 0.5) * T, y: (ty + 0.5) * T };
+}
+function placeSpecial(k){
+  const s = specials[k], pos = randomSpot(10 * T);
+  s.x = pos.x; s.y = pos.y; s.state = 'map'; s.t = 0;
+}
+function spawnPick(type, minDist){
+  const s = randomSpot(minDist);
+  pickups.push({ type, x: s.x, y: s.y, age: 0 });
+}
+function reset(){
+  for (const p of players){
+    p.x = p.sx; p.y = p.sy; p.aim = p.aim0; p.dead = false;
+    p.lives = MAX_LIVES; p.hp = HP_MAX; p.vest = false;
+    p.cd = 0; p.inv = 0; p.flash = 0; p.heal = 0;
+    p.mag = MAG_SIZE; p.reserve = RESERVE_MAGS; p.reload = 0; p.special = null;
+    p.nades = START_NADES; p.wires = 0; p.turrets = 0; p.wireA = null;
+    p.medkits = 0; p.mines = 0; p.healT = 0; p.meleeT = 0;
+    p.msg = ''; p.msgT = 0; p.weapon = 'pistol'; p.armed = false; p.joy = null;
+    if (p.remote) p.netIn = newNetIn();
+  }
+  bullets = []; grenades = []; explosions = []; wires = []; turrets = []; mines = []; pickups = [];
+  pickTimers = { med: 0, vest: 0, wire: 0, turret: 0, mine: 0 };
+  state = 'count'; countT = COUNTDOWN; goT = 0; winner = null;
+  placeSpecial('mg'); placeSpecial('rb');
+  spawnPick('med', 8 * T);
+}
+function toHub(){          // solo modo local
+  reset();
+  state = 'hub';
+  for (const p of players) p.ready = false;
+}
+
+// =====================================================================
+//  ENTRADA (teclado, táctil y red)
+// =====================================================================
+const keys = {};
+const once = new Set();
+const handled = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Slash','Minus','Period','Space','NumpadDecimal','Comma']);
+const down = list => list.some(k => keys[k]);
+const pressed = list => list.some(k => once.has(k));
+
+function localInput(p){
+  const c = p.ctl;
+  let mx = (down(c.right) ? 1 : 0) - (down(c.left) ? 1 : 0);
+  let my = (down(c.down) ? 1 : 0) - (down(c.up) ? 1 : 0);
+  let sp = 1;
+  if (p.joy && (p.joy.x || p.joy.y)){ mx = p.joy.x; my = p.joy.y; sp = Math.min(1, Math.hypot(mx, my)); }
+  const l = Math.hypot(mx, my);
+  if (l > 0){ mx /= l; my /= l; } else sp = 0;
+  return { mx, my, sp, shoot: down(c.shoot), reload: down(c.reload),
+    nade: pressed(c.nade), wire: pressed(c.wire), turret: pressed(c.turret),
+    mine: pressed(c.mine), heal: pressed(c.heal), swap: pressed(c.swap) };
+}
+function getInput(p){
+  if (!p.remote) return localInput(p);
+  const n = p.netIn || newNetIn();
+  const inp = { mx: n.c.mx, my: n.c.my, sp: n.c.sp, shoot: n.c.shoot, reload: n.c.reload,
+    nade: !!n.e.nade, wire: !!n.e.wire, turret: !!n.e.turret, mine: !!n.e.mine, heal: !!n.e.heal, swap: !!n.e.swap };
+  n.e = {};
+  return inp;
+}
+
+// =====================================================================
+//  LÓGICA DEL JUEGO (la ejecuta el modo local y el anfitrión)
+// =====================================================================
+function blocked(p, nx, ny){
+  if (hitsWall(nx, ny, R)) return true;
+  for (const o of othersOf(p)){
+    const nd = Math.hypot(nx - o.x, ny - o.y);
+    if (nd < R * 2 && nd < Math.hypot(p.x - o.x, p.y - o.y)) return true;
+  }
+  return false;
+}
+function tryMove(p, dx, dy){
+  const nx = p.x + dx, ny = p.y + dy;
+  if (!blocked(p, nx, ny)){ p.x = nx; p.y = ny; }
+}
+function say(p, txt, t){ p.msg = txt; p.msgT = t || 2; }
+
+function respawn(p){ p.x = p.sx; p.y = p.sy; p.aim = p.aim0; p.inv = 1.5; p.cd = Math.max(p.cd, 0.5); }
+function checkEnd(){
+  const al = alivePlayers();
+  if (al.length <= 1 && state === 'play'){ state = 'over'; winner = al[0] || null; }
+}
+function loseLife(t){
+  t.lives--; t.flash = 0.4;
+  if (t.lives <= 0){ t.lives = 0; t.hp = 0; t.dead = true; t.wireA = null; t.healT = 0; checkEnd(); }
+  else { t.hp = HP_MAX; t.vest = false; t.wireA = null; t.healT = 0; respawn(t); }
+}
+function damage(t, amt, ignoreVest){
+  if (state !== 'play' || t.inv > 0 || t.dead) return false;
+  if (t.healT > 0){ t.healT = 0; say(t, 'Curación interrumpida'); }
+  if (!ignoreVest && t.vest) amt *= (1 - VEST_REDUCE);
+  t.hp -= amt; t.flash = 0.25;
+  if (t.hp <= 0) loseLife(t);
+  return true;
+}
+function explode(x, y, radius, dmg){
+  explosions.push({ x, y, r: radius, t: 0 });
+  for (const p of players){
+    if (p.dead) continue;
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d < radius + R * 0.6 && los(x, y, p.x, p.y)) damage(p, dmg);
+  }
+  for (const tu of turrets){
+    const d = Math.hypot(tu.x - x, tu.y - y);
+    if (d < radius && los(x, y, tu.x, tu.y)) tu.hp -= dmg;
+  }
+}
+function closestOnSeg(px, py, w){
+  const vx = w.bx - w.ax, vy = w.by - w.ay;
+  const l2 = vx * vx + vy * vy || 1;
+  let t = ((px - w.ax) * vx + (py - w.ay) * vy) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return { x: w.ax + vx * t, y: w.ay + vy * t };
+}
+function fire(p, kind){
+  const dx = Math.cos(p.aim), dy = Math.sin(p.aim);
+  let x = p.x + dx * (R + 4), y = p.y + dy * (R + 4);
+  if (solidP(x, y)){ x = p.x; y = p.y; }
+  bullets.push({ x, y, vx: dx * BULLET, vy: dy * BULLET, owner: p, kind, dmg: DMG_SHOT, bl: 15, left: false, life: 60 });
+}
+function fireShotgun(p, n){
+  let x = p.x + Math.cos(p.aim) * (R + 4), y = p.y + Math.sin(p.aim) * (R + 4);
+  if (solidP(x, y)){ x = p.x; y = p.y; }
+  for (let i = 0; i < n; i++){
+    const off = n === 1 ? 0 : (-1 + 2 * i / (n - 1)) * SHOT_HALF;
+    const a = p.aim + off;
+    bullets.push({ x, y, vx: Math.cos(a) * BULLET, vy: Math.sin(a) * BULLET, owner: p, kind: 'sg', dmg: DMG_SHOT, bl: 0, left: false, life: 60 });
+  }
+}
+function fireTurret(t){
+  const dx = Math.cos(t.aim), dy = Math.sin(t.aim);
+  let x = t.x + dx * 14, y = t.y + dy * 14;
+  if (solidP(x, y)){ x = t.x; y = t.y; }
+  bullets.push({ x, y, vx: dx * BULLET, vy: dy * BULLET, owner: t.owner, kind: 'tur', dmg: DMG_TURRET, bl: 0, left: true, life: 20 });
+}
+
+function hubUpdate(){
+  for (const p of players){
+    const c = p.ctl;
+    if (!p.ready){
+      if (pressed(c.left)) p.char = (p.char + CHARS.length - 1) % CHARS.length;
+      if (pressed(c.right)) p.char = (p.char + 1) % CHARS.length;
+    }
+    if (pressed(c.shoot)) p.ready = !p.ready;
+  }
+  if (players.length && players.every(p => p.ready)) reset();
+}
+
+function update(dt){
+  clock += dt;
+  if (goT > 0) goT -= dt;
+  if (state === 'hub'){ hubUpdate(); return; }
+  if (state === 'count'){
+    for (const p of players) if (p.remote) p.netIn = newNetIn();
+    countT -= dt;
+    if (countT <= 0){ state = 'play'; goT = 0.8; }
+    return;
+  }
+  if (state !== 'play') return;
+
+  const alive = alivePlayers();
+  for (const p of alive){
+    if (p.dead || state !== 'play') continue;
+    const inp = getInput(p);
+    let mx = inp.mx, my = inp.my;
+    if (mx || my){
+      tryMove(p, mx * SPEED * inp.sp * dt, 0);
+      tryMove(p, 0, my * SPEED * inp.sp * dt);
+      const diff = angNorm(Math.atan2(my, mx) - p.aim);
+      const maxTurn = TURN_SPEED * dt;
+      p.aim += Math.abs(diff) <= maxTurn ? diff : Math.sign(diff) * maxTurn;
+    }
+    p.cd -= dt; p.inv -= dt; p.flash -= dt; p.heal -= dt; p.msgT -= dt;
+
+    // recarga
+    if (p.reload > 0){
+      p.reload -= dt;
+      if (p.reload <= 0){ p.reload = 0; p.mag = MAG_SIZE; }
+    } else if (inp.reload && p.mag < MAG_SIZE && p.reserve > 0){
+      p.mag = 0; p.reserve--; p.reload = RELOAD_TIME;
+    } else if (p.mag <= 0 && p.reserve > 0){
+      p.reserve--; p.reload = RELOAD_TIME;
+    }
+
+    // cambio de arma base
+    if (inp.swap){
+      p.weapon = p.weapon === 'pistol' ? 'shotgun' : 'pistol';
+      p.cd = Math.max(p.cd, 0.25);
+      say(p, p.weapon === 'shotgun' ? 'Escopeta' : 'Pistola', 1.2);
+    }
+    // tras empezar hay que soltar el botón de disparo una vez antes de poder disparar
+    if (!inp.shoot) p.armed = true;
+    if (inp.shoot && p.armed && p.cd <= 0){
+      if (p.special){
+        const sp = specials[p.special.type];
+        fire(p, p.special.type);
+        p.cd = sp.cd;
+        p.special.ammo--;
+        if (p.special.ammo <= 0){ sp.state = 'cooldown'; sp.t = SPECIAL_RESPAWN; p.special = null; }
+      } else if (p.reload <= 0 && p.mag > 0){
+        if (p.weapon === 'shotgun'){
+          const n = Math.min(SHOT_PELLETS, p.mag);
+          fireShotgun(p, n); p.cd = SHOT_CD; p.mag -= n;
+        } else {
+          fire(p, 'n'); p.cd = PISTOL_CD; p.mag--;
+        }
+      }
+    }
+
+    // granada
+    if (inp.nade){
+      if (p.nades > 0){
+        const dx = Math.cos(p.aim), dy = Math.sin(p.aim);
+        let x = p.x + dx * (R + 6), y = p.y + dy * (R + 6);
+        if (hitsWall(x, y, 5)){ x = p.x; y = p.y; }
+        grenades.push({ x, y, vx: dx * GREN_SPEED, vy: dy * GREN_SPEED, fuse: GREN_FUSE, owner: p });
+        p.nades--;
+      } else say(p, 'Sin granadas');
+    }
+    // cable trampa: punto A -> punto B
+    if (inp.wire){
+      if (p.wireA){
+        const dx = p.x - p.wireA.x, dy = p.y - p.wireA.y, len = Math.hypot(dx, dy);
+        if (len < WIRE_MIN){ p.wireA = null; say(p, 'Cable cancelado'); }
+        else {
+          let bx = p.x, by = p.y;
+          if (len > WIRE_MAX){ bx = p.wireA.x + dx / len * WIRE_MAX; by = p.wireA.y + dy / len * WIRE_MAX; }
+          wires.push({ ax: p.wireA.x, ay: p.wireA.y, bx, by, owner: p });
+          p.wires--; p.wireA = null; say(p, 'Cable colocado');
+        }
+      } else if (p.wires > 0){
+        p.wireA = { x: p.x, y: p.y };
+      } else say(p, 'No tienes cable');
+    }
+    // torreta
+    if (inp.turret){
+      if (p.turrets > 0){
+        let x = p.x + Math.cos(p.aim) * 30, y = p.y + Math.sin(p.aim) * 30;
+        if (hitsWall(x, y, 12)){ x = p.x; y = p.y; }
+        turrets.push({ x, y, owner: p, hp: TURRET_HP, life: TURRET_LIFE, aim: p.aim, cd: 0.8 });
+        p.turrets--;
+      } else say(p, 'No tienes torreta');
+    }
+    // mina terrestre
+    if (inp.mine){
+      if (p.mines > 0){
+        mines.push({ x: p.x, y: p.y, owner: p, arm: MINE_ARM });
+        p.mines--; say(p, 'Mina colocada (se arma en 1 s)');
+      } else say(p, 'No tienes minas');
+    }
+    // botiquín guardado
+    if (inp.heal && p.healT <= 0){
+      if (p.medkits <= 0) say(p, 'No tienes botiquín guardado');
+      else if (p.hp >= HP_MAX) say(p, 'Tu salud ya está completa');
+      else p.healT = HEAL_TIME;
+    }
+    if (p.healT > 0){
+      p.healT -= dt;
+      if (p.healT <= 0){
+        p.healT = 0; p.medkits--; p.hp = HP_MAX; p.heal = 0.45; say(p, 'Salud restaurada');
+      }
+    }
+
+    // globos de armas especiales
+    if (!p.special){
+      for (const k in specials){
+        const s = specials[k];
+        if (s.state === 'map' && Math.hypot(s.x - p.x, s.y - p.y) < R + 12){
+          p.special = { type: k, ammo: s.ammo }; s.state = 'held'; break;
+        }
+      }
+    }
+    // objetos recogibles
+    for (let i = 0; i < pickups.length; i++){
+      const m = pickups[i];
+      if (Math.hypot(m.x - p.x, m.y - p.y) >= R + 10) continue;
+      let ok = false;
+      if (m.type === 'med'){
+        if (p.lives < MAX_LIVES){ p.lives++; ok = true; p.heal = 0.45; say(p, 'Botiquín: +1 vida'); }
+        else if (p.medkits < MAX_MEDKITS){ p.medkits++; ok = true; say(p, 'Botiquín guardado'); }
+      } else if (m.type === 'vest'){
+        if (!p.vest){ p.vest = true; ok = true; say(p, 'Chaleco puesto (-30 % de daño)'); }
+      } else if (m.type === 'wire'){
+        if (p.wires < MAX_WIRES){ p.wires++; ok = true; say(p, 'Cable recogido'); }
+      } else if (m.type === 'turret'){
+        if (p.turrets < MAX_TURRETS){ p.turrets++; ok = true; say(p, 'Torreta recogida'); }
+      } else if (m.type === 'mine'){
+        if (p.mines < MAX_MINES){ p.mines++; ok = true; say(p, 'Mina recogida'); }
+      }
+      if (ok){ pickups.splice(i, 1); break; }
+    }
+  }
+
+  // contacto directo: quien se quedó sin balas daña 1 de vida cada 0.1 s a quien toque
+  for (const att of players){
+    if (att.dead || state !== 'play'){ att.meleeT = 0; continue; }
+    const touching = players.filter(e => e !== att && !e.dead && Math.hypot(att.x - e.x, att.y - e.y) < R * 2 + 4);
+    if (touching.length && unarmed(att)){
+      att.meleeT += dt;
+      while (att.meleeT >= MELEE_TICK && state === 'play'){
+        att.meleeT -= MELEE_TICK;
+        for (const e of touching) damage(e, 1);
+      }
+    } else att.meleeT = 0;
+  }
+
+  for (const k in specials){
+    const s = specials[k];
+    if (s.state === 'cooldown'){ s.t -= dt; if (s.t <= 0) placeSpecial(k); }
+  }
+  // aparición y cambio de lugar de objetos
+  for (const type in PICKS){
+    const cfg = PICKS[type];
+    pickTimers[type] += dt;
+    if (pickTimers[type] >= cfg.every){
+      pickTimers[type] -= cfg.every;
+      if (pickups.filter(m => m.type === type).length < cfg.max) spawnPick(type, 6 * T);
+    }
+  }
+  for (const m of pickups){
+    m.age += dt;
+    if (m.age >= PICKS[m.type].move){ const n = randomSpot(6 * T); m.x = n.x; m.y = n.y; m.age = 0; }
+  }
+
+  // granadas
+  for (const g of grenades){
+    g.fuse -= dt;
+    const f = Math.exp(-GREN_FRICTION * dt); g.vx *= f; g.vy *= f;
+    const nx = g.x + g.vx * dt, ny = g.y + g.vy * dt;
+    if (!hitsWall(nx, g.y, 5)) g.x = nx; else g.vx = -g.vx * 0.5;
+    if (!hitsWall(g.x, ny, 5)) g.y = ny; else g.vy = -g.vy * 0.5;
+    if (g.fuse <= 0){ g.dead = true; explode(g.x, g.y, GREN_RADIUS, DMG_GRENADE); }
+  }
+  grenades = grenades.filter(g => !g.dead);
+
+  // cables trampa (se activan con cualquier jugador que no sea su dueño)
+  for (const w of wires){
+    for (const e of players){
+      if (e === w.owner || e.dead || e.inv > 0) continue;
+      const c = closestOnSeg(e.x, e.y, w);
+      if (Math.hypot(e.x - c.x, e.y - c.y) < R){ w.dead = true; explode(c.x, c.y, WIRE_RADIUS, DMG_WIRE); break; }
+    }
+  }
+  wires = wires.filter(w => !w.dead);
+
+  // minas terrestres
+  for (const m of mines){
+    if (m.arm > 0){ m.arm -= dt; continue; }
+    for (const e of players){
+      if (e === m.owner || e.dead || e.inv > 0) continue;
+      if (Math.hypot(e.x - m.x, e.y - m.y) < R + 4){ m.dead = true; explode(m.x, m.y, MINE_RADIUS, DMG_MINE); break; }
+    }
+  }
+  mines = mines.filter(m => !m.dead);
+
+  // torretas: siguen y disparan al enemigo más cercano que puedan ver
+  for (const t of turrets){
+    t.life -= dt; t.cd -= dt;
+    if (t.hp <= 0 || t.life <= 0){
+      t.dead = true;
+      if (t.hp <= 0) explosions.push({ x: t.x, y: t.y, r: 30, t: 0 });
+      continue;
+    }
+    let target = null, bd = Infinity;
+    for (const e of players){
+      if (e === t.owner || e.dead) continue;
+      const d = Math.hypot(e.x - t.x, e.y - t.y);
+      if (d < TURRET_RANGE && d < bd && los(t.x, t.y, e.x, e.y)){ target = e; bd = d; }
+    }
+    if (target){
+      const ta = Math.atan2(target.y - t.y, target.x - t.x);
+      const diff = angNorm(ta - t.aim);
+      const maxTurn = TURRET_TURN * dt;
+      t.aim += Math.abs(diff) <= maxTurn ? diff : Math.sign(diff) * maxTurn;
+      if (Math.abs(angNorm(ta - t.aim)) < 0.12 && t.cd <= 0){ fireTurret(t); t.cd = 1 / TURRET_RATE; }
+    }
+  }
+  turrets = turrets.filter(t => !t.dead);
+
+  for (const e of explosions) e.t += dt;
+  explosions = explosions.filter(e => e.t < 0.4);
+
+  // balas
+  for (const b of bullets){
+    b.life -= dt;
+    if (b.life <= 0){ b.dead = true; continue; }
+    const dist = BULLET * dt;
+    const steps = Math.max(1, Math.ceil(dist / 3));
+    for (let i = 0; i < steps && !b.dead; i++){
+      const ox = b.x, oy = b.y;
+      b.x += b.vx * dt / steps; b.y += b.vy * dt / steps;
+      if (solidP(b.x, b.y)){
+        if (b.kind === 'rb' && b.bl > 0){
+          const hx = solidP(b.x, oy), hy = solidP(ox, b.y);
+          if (hx) b.vx = -b.vx;
+          if (hy) b.vy = -b.vy;
+          if (!hx && !hy){ b.vx = -b.vx; b.vy = -b.vy; }
+          b.x = ox; b.y = oy; b.bl--;
+          continue;
+        }
+        b.dead = true; break;
+      }
+      for (const tu of turrets){
+        if (tu.owner === b.owner) continue;
+        if (Math.hypot(b.x - tu.x, b.y - tu.y) < 13){ tu.hp -= b.dmg; b.dead = true; break; }
+      }
+      if (b.dead) break;
+      for (const p of players){
+        if (p.dead) continue;
+        const d = Math.hypot(b.x - p.x, b.y - p.y);
+        if (p === b.owner){
+          if (d > R + 5) b.left = true;
+          if (!(b.kind === 'rb' && b.left)) continue;
+        }
+        if (d < R + 3){ b.dead = true; damage(p, b.dmg); break; }
+      }
+    }
+  }
+  bullets = bullets.filter(b => !b.dead);
+}
+// ---------- Visión ----------
+function visPath(p, list){
+  const path = new Path2D();
+  const N = 90, half = FOV / 2;
+  path.moveTo(p.x, p.y);
+  for (let i = 0; i <= N; i++){
+    const a = p.aim - half + FOV * i / N;
+    const cx = Math.cos(a), cy = Math.sin(a);
+    const d = Math.min(RANGE, rayDist(p.x, p.y, cx, cy, RANGE, list) + 3);
+    path.lineTo(p.x + cx * d, p.y + cy * d);
+  }
+  path.closePath();
+  const M = 48;
+  for (let i = 0; i < M; i++){
+    const a = Math.PI * 2 * i / M;
+    const cx = Math.cos(a), cy = Math.sin(a);
+    const d = Math.min(NEAR, rayDist(p.x, p.y, cx, cy, NEAR, list) + 3);
+    const x = p.x + cx * d, y = p.y + cy * d;
+    if (i === 0) path.moveTo(x, y); else path.lineTo(x, y);
+  }
+  path.closePath();
+  return path;
+}
+
+// ---------- Dibujo ----------
+function hpColor(r){ return r > 0.5 ? '#4cd964' : (r > 0.25 ? '#ffb340' : '#ff4d4d'); }
+
+function drawPlayer(p){
+  const ch = CHARS[p.char];
+  const blink = p.inv > 0 && Math.floor(p.inv * 12) % 2 === 0;
+  ctx.save();
+  if (blink) ctx.globalAlpha = 0.4;
+  const hasImg = imgOk(ch);
+  ctx.save();
+  ctx.globalAlpha *= hasImg ? 0.45 : 1;
+  ctx.fillStyle = p.color;
+  ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  if (hasImg){
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.aim - ch.face);
+    const k = ch.size / Math.max(ch.img.naturalWidth, ch.img.naturalHeight);
+    const w = ch.img.naturalWidth * k, h = ch.img.naturalHeight * k;
+    ctx.drawImage(ch.img, -w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = p.flash > 0 ? '#ff2a2a' : (p.heal > 0 ? '#3dff7a' : (unarmed(p) ? '#ff3b3b' : 'rgba(0,0,0,.6)'));
+  ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, Math.PI * 2); ctx.stroke();
+  if (p.vest){
+    ctx.strokeStyle = '#9be564'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(p.x, p.y, R + 4, 0, Math.PI * 2); ctx.stroke();
+  }
+  if (p.healT > 0){
+    ctx.strokeStyle = '#4cd964'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(p.x, p.y, R + 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - p.healT / HEAL_TIME)); ctx.stroke();
+  }
+  // cañón
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(p.x + Math.cos(p.aim) * (R - 1), p.y + Math.sin(p.aim) * (R - 1));
+  ctx.lineTo(p.x + Math.cos(p.aim) * (R + 8), p.y + Math.sin(p.aim) * (R + 8)); ctx.stroke();
+  // barra de vida sobre el jugador
+  const bx = p.x - 16, by = p.y - R - 14;
+  ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(bx - 1, by - 1, 34, 6);
+  ctx.fillStyle = hpColor(Math.max(0, p.hp) / HP_MAX); ctx.fillRect(bx, by, 32 * Math.max(0, p.hp) / HP_MAX, 4);
+  ctx.restore();
+}
+
+function drawLaser(p){
+  const mx = p.x + Math.cos(p.aim) * (R + 8), my = p.y + Math.sin(p.aim) * (R + 8);
+  const d = rayDist(mx, my, Math.cos(p.aim), Math.sin(p.aim), 1500);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,40,40,.95)'; ctx.lineWidth = 2;
+  ctx.shadowColor = '#ff2020'; ctx.shadowBlur = 8 * FX;
+  ctx.beginPath(); ctx.moveTo(mx, my);
+  ctx.lineTo(mx + Math.cos(p.aim) * d, my + Math.sin(p.aim) * d); ctx.stroke();
+  ctx.restore();
+  if (!p.special && p.weapon === 'shotgun'){
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,60,60,.35)'; ctx.lineWidth = 1;
+    for (const sg of [-1, 1]){
+      const a = p.aim + sg * SHOT_HALF, dx = Math.cos(a), dy = Math.sin(a);
+      const dd = rayDist(mx, my, dx, dy, 1500);
+      ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx + dx * dd, my + dy * dd); ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawPickup(m){
+  ctx.save();
+  ctx.translate(m.x, m.y);
+  const pulse = 1 + Math.sin(clock * 4) * 0.05;
+  ctx.scale(pulse, pulse);
+  if (m.type === 'med'){
+    ctx.fillStyle = '#f4f4f4'; ctx.strokeStyle = '#999'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(-11, -11, 22, 22, 4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e03030'; ctx.fillRect(-2.5, -7, 5, 14); ctx.fillRect(-7, -2.5, 14, 5);
+  } else if (m.type === 'vest'){
+    ctx.fillStyle = '#5f7f3a'; ctx.strokeStyle = '#2f4018'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-10, -11); ctx.lineTo(-4, -11); ctx.lineTo(0, -6); ctx.lineTo(4, -11); ctx.lineTo(10, -11);
+    ctx.lineTo(10, 11); ctx.lineTo(-10, 11); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3d5524'; ctx.fillRect(-7, 1, 14, 4); ctx.fillRect(-7, 7, 14, 2);
+  } else if (m.type === 'wire'){
+    ctx.fillStyle = '#d8c24a'; ctx.strokeStyle = '#7a6a1c'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#4a4310'; ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#7a6a1c'; ctx.beginPath(); ctx.moveTo(-6, -6); ctx.lineTo(6, 6); ctx.moveTo(6, -6); ctx.lineTo(-6, 6); ctx.stroke();
+  } else if (m.type === 'turret'){
+    ctx.fillStyle = '#3a3f47'; ctx.strokeStyle = '#9aa3ad'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(-10, -10, 20, 20, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#c9ced4'; ctx.fillRect(0, -2.5, 13, 5);
+    ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+  } else if (m.type === 'mine'){
+    ctx.fillStyle = '#2a2d33'; ctx.strokeStyle = '#8a8f98'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e03030'; ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#8a8f98';
+    for (let i = 0; i < 4; i++){ const a = i * Math.PI / 2 + Math.PI / 4; ctx.fillRect(Math.cos(a) * 8 - 1.5, Math.sin(a) * 8 - 1.5, 3, 3); }
+  }
+  ctx.restore();
+}
+
+function drawMine(m, a){
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.fillStyle = '#2a2d33'; ctx.strokeStyle = '#8a8f98'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(m.x, m.y, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  const armed = m.arm <= 0;
+  ctx.fillStyle = armed ? (Math.floor(clock * 3) % 2 ? '#ff3b3b' : '#7a1c1c') : '#ffd84d';
+  ctx.beginPath(); ctx.arc(m.x, m.y, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawWire(w, a){
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(w.ax, w.ay); ctx.lineTo(w.bx, w.by); ctx.stroke();
+  ctx.fillStyle = '#c9a227';
+  ctx.beginPath(); ctx.arc(w.ax, w.ay, 3.5, 0, Math.PI * 2); ctx.arc(w.bx, w.by, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawTurret(t, a){
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.translate(t.x, t.y);
+  ctx.fillStyle = '#3a3f47'; ctx.strokeStyle = t.owner.color; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(-10, -10, 20, 20, 3); ctx.fill(); ctx.stroke();
+  ctx.save(); ctx.rotate(t.aim);
+  ctx.fillStyle = '#c9ced4'; ctx.fillRect(0, -3, 16, 6);
+  ctx.restore();
+  ctx.fillStyle = '#c9ced4'; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill();
+  // tiempo restante
+  ctx.strokeStyle = '#ffd84d'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, 15, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, t.life) / TURRET_LIFE); ctx.stroke();
+  // vida
+  ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(-11, 17, 22, 4);
+  ctx.fillStyle = hpColor(Math.max(0, t.hp) / TURRET_HP); ctx.fillRect(-10, 18, 20 * Math.max(0, t.hp) / TURRET_HP, 2);
+  ctx.restore();
+}
+
+function drawGrenade(g){
+  ctx.save();
+  const blinkRed = g.fuse < 1 && Math.floor(g.fuse * 8) % 2 === 0;
+  ctx.fillStyle = blinkRed ? '#ff4d4d' : '#4b6b3a'; ctx.strokeStyle = '#1d2b16'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(g.x, g.y, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ccc'; ctx.fillRect(g.x - 1.5, g.y - 8, 3, 3);
+  ctx.restore();
+}
+
+function drawExplosion(e){
+  const k = e.t / 0.4;
+  ctx.save();
+  ctx.globalAlpha = 1 - k;
+  const r = e.r * (0.35 + 0.65 * k);
+  const g = ctx.createRadialGradient(e.x, e.y, 2, e.x, e.y, r);
+  g.addColorStop(0, '#fff3b0'); g.addColorStop(0.5, '#ff9a2e'); g.addColorStop(1, 'rgba(255,60,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawBalloon(x, y, s){
+  const by = y + Math.sin(clock * 2.2 + x) * 3;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x, by + 14); ctx.quadraticCurveTo(x - 4, by + 22, x, by + 30); ctx.stroke();
+  ctx.fillStyle = s.color; ctx.shadowColor = s.color; ctx.shadowBlur = 12 * FX;
+  ctx.beginPath(); ctx.ellipse(x, by, 11, 14, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0 * FX;
+  ctx.fillStyle = 'rgba(255,255,255,.35)';
+  ctx.beginPath(); ctx.ellipse(x - 4, by - 5, 3, 5, -0.4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = '700 9px system-ui,sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(s.label, x, by + 2);
+  ctx.restore();
+}
+
+function drawBalloonsOverlay(p, vx){
+  ctx.save();
+  ctx.beginPath(); ctx.rect(vx, 0, VW, VH); ctx.clip();
+  const cx = vx + VW / 2, cy = VH / 2;
+  for (const k in specials){
+    const s = specials[k];
+    if (s.state !== 'map') continue;
+    const dx = s.x - p.x, dy = s.y - p.y;
+    if (Math.abs(dx) < VW / 2 - 18 && Math.abs(dy) < VH / 2 - 30){
+      drawBalloon(cx + dx, cy + dy, s);
+    } else {
+      const hx = VW / 2 - 26, hy = VH / 2 - 26;
+      const kk = Math.min(hx / (Math.abs(dx) || 1e-9), hy / (Math.abs(dy) || 1e-9));
+      const ex = cx + dx * kk, ey = cy + dy * kk;
+      const ang = Math.atan2(dy, dx);
+      ctx.save();
+      ctx.translate(ex, ey);
+      ctx.fillStyle = s.color; ctx.shadowColor = s.color; ctx.shadowBlur = 10 * FX;
+      ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.rotate(ang);
+      ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(10, -6); ctx.lineTo(10, 6); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      ctx.save();
+      ctx.fillStyle = '#fff'; ctx.font = '600 11px system-ui,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(Math.round(Math.hypot(dx, dy) / T) + ' m', ex - Math.cos(ang) * 24, ey - Math.sin(ang) * 24);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+
+// tus propios cables y torretas se ven siempre (tenues), y la vista previa del cable
+function drawOwnGadgets(p, vx){
+  ctx.save();
+  ctx.beginPath(); ctx.rect(vx, 0, VW, VH); ctx.clip();
+  ctx.translate(vx + VW / 2 - p.x, VH / 2 - p.y);
+  for (const w of wires) if (w.owner === p) drawWire(w, 0.55);
+  for (const t of turrets) if (t.owner === p) drawTurret(t, 0.6);
+  for (const m of mines) if (m.owner === p) drawMine(m, 0.9);   // las minas solo las ve su dueño
+  if (p.wireA){
+    const len = Math.hypot(p.x - p.wireA.x, p.y - p.wireA.y);
+    ctx.strokeStyle = len > WIRE_MAX ? '#ff5a5a' : '#ffffff';
+    ctx.lineWidth = 1.5; ctx.setLineDash([5, 5]);
+    ctx.beginPath(); ctx.moveTo(p.wireA.x, p.wireA.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffd84d'; ctx.beginPath(); ctx.arc(p.wireA.x, p.wireA.y, 4, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawView(p, vx, hud){
+  const list = nearSegs(p.x, p.y, RANGE + 20);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(vx, 0, VW, VH); ctx.clip();
+  ctx.fillStyle = '#000'; ctx.fillRect(vx, 0, VW, VH);
+  ctx.translate(vx + VW / 2 - p.x, VH / 2 - p.y);
+  ctx.clip(visPath(p, list));
+
+  const tx0 = Math.max(0, Math.floor((p.x - VW / 2) / T)), tx1 = Math.min(COLS - 1, Math.ceil((p.x + VW / 2) / T));
+  const ty0 = Math.max(0, Math.floor((p.y - VH / 2) / T)), ty1 = Math.min(ROWS - 1, Math.ceil((p.y + VH / 2) / T));
+  for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++){
+    if (grid[ty][tx]){
+      ctx.fillStyle = '#7d838c'; ctx.fillRect(tx * T, ty * T, T, T);
+      ctx.strokeStyle = '#5b6068'; ctx.lineWidth = 1; ctx.strokeRect(tx * T + .5, ty * T + .5, T - 1, T - 1);
+    } else {
+      ctx.fillStyle = (tx + ty) % 2 ? '#2b2f36' : '#30353d';
+      ctx.fillRect(tx * T, ty * T, T, T);
+    }
+  }
+  for (const q of players){
+    ctx.save();
+    ctx.fillStyle = q.color; ctx.globalAlpha = 0.18;
+    ctx.beginPath(); ctx.arc(q.sx, q.sy, T * 0.9, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.7; ctx.strokeStyle = q.color; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.arc(q.sx, q.sy, T * 0.9, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  for (const m of pickups) drawPickup(m);
+  for (const w of wires) drawWire(w, 0.9);
+  for (const t of turrets) drawTurret(t, 1);
+  for (const g of grenades) drawGrenade(g);
+  drawLaser(p);   // la mira roja solo la ve su dueño
+  for (const b of bullets){
+    ctx.save();
+    if (b.kind === 'rb'){ ctx.fillStyle = '#5dff9a'; ctx.shadowColor = '#2bff75'; ctx.shadowBlur = 10 * FX; }
+    else if (b.kind === 'mg'){ ctx.fillStyle = '#d9a8ff'; ctx.shadowColor = '#b26cff'; ctx.shadowBlur = 8 * FX; }
+    else if (b.kind === 'sg'){ ctx.fillStyle = '#ffb347'; ctx.shadowColor = '#ff9a2e'; ctx.shadowBlur = 6 * FX; }
+    else if (b.kind === 'tur'){ ctx.fillStyle = '#ff7a59'; ctx.shadowColor = '#ff4d2a'; ctx.shadowBlur = 8 * FX; }
+    else { ctx.fillStyle = '#ffe14d'; ctx.shadowColor = '#ffd000'; ctx.shadowBlur = 8 * FX; }
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.kind === 'rb' ? 4 : (b.kind === 'tur' || b.kind === 'sg' ? 3 : 3.5), 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  for (const q of players) if (!q.dead) drawPlayer(q);
+  for (const e of explosions) drawExplosion(e);
+
+  const g = ctx.createRadialGradient(p.x, p.y, 40, p.x, p.y, RANGE + 10);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.7)');
+  ctx.fillStyle = g;
+  ctx.fillRect(p.x - VW, p.y - VH, VW * 2, VH * 2);
+  ctx.restore();
+
+  drawOwnGadgets(p, vx);
+  drawBalloonsOverlay(p, vx);
+  if (hud !== false) drawHUD(p, vx);
+}
+
+function drawHUD(p, vx0){
+  ctx.save();
+  ctx.translate(vx0, 0); ctx.scale(HS, HS);
+  const vx = 0;
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.font = '600 14px system-ui,sans-serif';
+  ctx.fillStyle = p.color;
+  ctx.fillText(mode === 'local' ? p.name : 'Tú', vx + 14, 22);
+  for (let i = 0; i < MAX_LIVES; i++){
+    ctx.beginPath(); ctx.arc(vx + 58 + i * 20, 22, 6, 0, Math.PI * 2);
+    if (i < p.lives){ ctx.fillStyle = '#ff4d5e'; ctx.fill(); }
+    else { ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 2; ctx.stroke(); }
+  }
+  // barra de salud (100 por vida)
+  const bx = vx + 130, by = 17, bw = 150, bh = 11;
+  const hr = Math.max(0, p.hp) / HP_MAX;
+  ctx.fillStyle = 'rgba(255,255,255,.15)'; ctx.fillRect(bx, by, bw, bh);
+  ctx.fillStyle = hpColor(hr); ctx.fillRect(bx, by, bw * hr, bh);
+  ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1; ctx.strokeRect(bx + .5, by + .5, bw - 1, bh - 1);
+  ctx.fillStyle = '#fff'; ctx.font = '600 12px system-ui,sans-serif';
+  ctx.fillText(String(Math.max(0, Math.ceil(p.hp))), bx + bw + 8, 22);
+  if (p.vest){ ctx.fillStyle = '#9be564'; ctx.fillText('Chaleco -30%', bx + bw + 40, 22); }
+
+  // cargadores
+  for (let i = 0; i < 1 + RESERVE_MAGS; i++){
+    const x = vx + 14 + i * 20, y = 38, w = 14, h = 22;
+    ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(x, y, w, h);
+    if (i === 0){
+      if (p.reload > 0){
+        ctx.fillStyle = '#888';
+        const fh = (h - 2) * (1 - p.reload / RELOAD_TIME);
+        ctx.fillRect(x + 1, y + h - 1 - fh, w - 2, fh);
+      } else {
+        ctx.fillStyle = '#ffe14d';
+        const fh = (h - 2) * p.mag / MAG_SIZE;
+        ctx.fillRect(x + 1, y + h - 1 - fh, w - 2, fh);
+      }
+    } else if (i <= p.reserve){
+      ctx.fillStyle = '#ffe14d'; ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+    }
+  }
+  ctx.font = '12px system-ui,sans-serif'; ctx.fillStyle = '#ddd';
+  const wname = p.special ? specials[p.special.type].name : (p.weapon === 'shotgun' ? 'Escopeta' : 'Pistola');
+  ctx.fillText(p.reload > 0 ? `Recargando… ${p.reload.toFixed(1)} s` : `${wname} · Balas ${p.mag}/${MAG_SIZE}`, vx + 82, 49);
+
+  ctx.fillStyle = '#ddd';
+  ctx.fillText(`Granadas ${p.nades} · Cable ${p.wires} · Torreta ${p.turrets} · Mina ${p.mines} · Botiquín ${p.medkits}`, vx + 14, 76);
+  let yy = 94;
+  if (p.special){
+    const sp = specials[p.special.type];
+    ctx.fillStyle = sp.color; ctx.font = '600 13px system-ui,sans-serif';
+    ctx.fillText(`${sp.name}: ${p.special.ammo}`, vx + 14, yy); yy += 18;
+  }
+  if (unarmed(p)){
+    ctx.fillStyle = '#ff4d4d'; ctx.font = '700 13px system-ui,sans-serif';
+    ctx.fillText('¡SIN BALAS! Tocar al rival le quita 1 de vida cada 0.1 s', vx + 14, yy); yy += 18;
+  }
+  if (p.healT > 0){
+    ctx.fillStyle = '#4cd964'; ctx.font = '600 13px system-ui,sans-serif';
+    ctx.fillText(`Aplicando botiquín… ${p.healT.toFixed(1)} s`, vx + 14, yy); yy += 18;
+  }
+  if (p.wireA){
+    ctx.fillStyle = '#ffd84d'; ctx.font = '600 13px system-ui,sans-serif';
+    ctx.fillText('Cable: punto A puesto, camina y pulsa de nuevo', vx + 14, yy); yy += 18;
+  }
+  if (p.msgT > 0){
+    ctx.fillStyle = '#ffd84d'; ctx.font = '600 13px system-ui,sans-serif';
+    ctx.fillText(p.msg, vx + 14, yy);
+  }
+  ctx.restore();
+  if (p.flash > 0){ ctx.fillStyle = `rgba(255,0,0,${Math.min(.35, p.flash)})`; ctx.fillRect(vx0, 0, VW, VH); }
+  if (p.heal > 0){ ctx.fillStyle = `rgba(60,255,120,${Math.min(.28, p.heal)})`; ctx.fillRect(vx0, 0, VW, VH); }
+}
+
+// ---------- Hub de personajes ----------
+function drawCharPreview(ch, p, cx, cy){
+  ctx.save();
+  if (imgOk(ch)){
+    ctx.imageSmoothingEnabled = false;
+    const k = Math.min(230 / ch.img.naturalWidth, 240 / ch.img.naturalHeight);
+    const w = ch.img.naturalWidth * k, h = ch.img.naturalHeight * k;
+    ctx.drawImage(ch.img, cx - w / 2, cy - h / 2, w, h);
+  } else {
+    ctx.fillStyle = p.color; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(cx, cy, 70, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 14; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx + 60, cy); ctx.lineTo(cx + 92, cy); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawHub(){
+  ctx.fillStyle = '#0e1014'; ctx.fillRect(0, 0, 1280, 640);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff'; ctx.font = '700 30px system-ui,sans-serif';
+  ctx.fillText('Elige tu personaje', 640, 44);
+  ctx.fillStyle = '#9aa0a8'; ctx.font = '14px system-ui,sans-serif';
+  ctx.fillText('Cuando los dos estén listos empieza la partida', 640, 74);
+  players.forEach((p, i) => {
+    const cx = 320 + i * 640, ch = CHARS[p.char];
+    ctx.save();
+    ctx.strokeStyle = p.ready ? '#4cd964' : p.color; ctx.lineWidth = p.ready ? 4 : 2;
+    ctx.fillStyle = 'rgba(255,255,255,.04)';
+    ctx.beginPath(); ctx.roundRect(cx - 270, 100, 540, 500, 16); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = p.color; ctx.font = '700 20px system-ui,sans-serif';
+    ctx.fillText(p.label, cx, 135);
+    drawCharPreview(ch, p, cx, 300);
+    ctx.fillStyle = '#fff'; ctx.font = '700 26px system-ui,sans-serif';
+    ctx.fillText(ch.name, cx, 450);
+    ctx.fillStyle = p.ready ? '#444' : '#fff'; ctx.font = '700 34px system-ui,sans-serif';
+    ctx.fillText('◀', cx - 215, 300); ctx.fillText('▶', cx + 215, 300);
+    for (let d = 0; d < CHARS.length; d++){
+      ctx.beginPath(); ctx.arc(cx + (d - (CHARS.length - 1) / 2) * 22, 485, 5, 0, Math.PI * 2);
+      ctx.fillStyle = d === p.char ? p.color : 'rgba(255,255,255,.25)'; ctx.fill();
+    }
+    ctx.save();
+    ctx.fillStyle = p.ready ? '#2e9e4f' : 'rgba(255,255,255,.12)';
+    ctx.strokeStyle = p.ready ? '#4cd964' : p.color; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(cx - 130, 505, 260, 50, 12); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = '700 20px system-ui,sans-serif';
+    ctx.fillText(p.ready ? '¡LISTO! (toca para cambiar)' : 'Confirmar', cx, 531);
+    ctx.restore();
+    if (!touchMode()){ ctx.fillStyle = '#9aa0a8'; ctx.font = '14px system-ui,sans-serif'; ctx.fillText(p.hubKeys, cx, 580); }
+  });
+  if (touchMode() && document.documentElement.requestFullscreen){
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.strokeStyle = '#9aa0a8'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(540, 604, 200, 32, 8); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = '600 15px system-ui,sans-serif';
+    ctx.fillText('⛶ Pantalla completa', 640, 621);
+    ctx.restore();
+  }
+  ctx.textAlign = 'left';
+}
+
+
+// ---------- Marcador (en línea) ----------
+function drawScoreboard(){
+  ctx.save();
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
+  const rh = 22 * HS, x = VW - 12 * HS;
+  players.forEach((p, i) => {
+    const y = 14 * HS + i * rh + rh / 2;
+    ctx.globalAlpha = p.dead ? 0.4 : 1;
+    // vidas
+    for (let k = 0; k < MAX_LIVES; k++){
+      const cx = x - (MAX_LIVES - 1 - k) * 14 * HS - 5 * HS;
+      ctx.beginPath(); ctx.arc(cx, y, 4.5 * HS, 0, Math.PI * 2);
+      if (k < p.lives){ ctx.fillStyle = '#ff4d5e'; ctx.fill(); }
+      else { ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    }
+    const nx = x - MAX_LIVES * 14 * HS - 6 * HS;
+    ctx.font = `${600} ${13 * HS}px system-ui,sans-serif`;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = '#000'; ctx.shadowBlur = 3 * (FX ? 1 : 0);
+    ctx.fillText(p.i === myIndex ? p.name + ' (tú)' : p.name, nx, y);
+    ctx.shadowBlur = 0;
+  });
+  ctx.restore();
+}
+
+// ---------- Botones dibujados en el canvas ----------
+function drawBtn(x, y, w, h, label, fill){
+  ctx.save();
+  ctx.fillStyle = fill; ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = '700 22px system-ui,sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+  ctx.restore();
+}
+function overButtons(){
+  const cx = cv.width / 2, cy = cv.height / 2;
+  const b = (y, label, fill, act) => ({ x: cx - 150, y, w: 300, h: 54, label, fill, act });
+  if (mode === 'local') return [b(cy + 60, 'Jugar otra vez', '#2e9e4f', 'again'), b(cy + 130, 'Elegir personaje', '#3a3f47', 'hub')];
+  if (mode === 'host') return [b(cy + 60, 'Jugar otra vez', '#2e9e4f', 'again'), b(cy + 130, 'Salir al menú', '#3a3f47', 'menu')];
+  return [b(cy + 90, 'Salir al menú', '#3a3f47', 'menu')];
+}
+
+function drawOverlays(){
+  const W = cv.width, H = cv.height, cx = W / 2, cy = H / 2;
+  if (state === 'count'){
+    ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ddd'; ctx.font = '600 22px system-ui,sans-serif';
+    ctx.fillText('Prepárense', cx, cy - 60);
+    const frac = countT - Math.floor(countT);
+    ctx.save();
+    ctx.globalAlpha = 0.35 + 0.65 * frac;
+    ctx.fillStyle = '#fff'; ctx.font = `700 ${90 + 40 * frac}px system-ui,sans-serif`;
+    ctx.fillText(String(Math.max(1, Math.ceil(countT))), cx, cy + 10);
+    ctx.restore();
+    ctx.textAlign = 'left';
+  } else if (goT > 0 && state === 'play'){
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, goT / 0.8);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#4cd964'; ctx.font = '700 80px system-ui,sans-serif';
+    ctx.fillText('¡YA!', cx, cy);
+    ctx.restore();
+  }
+  if (state === 'over'){
+    ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (winner){
+      ctx.fillStyle = winner.color; ctx.font = '700 48px system-ui,sans-serif';
+      ctx.fillText(mode === 'local' ? `¡Gana el Jugador ${winner.i + 1}!` : `¡Gana ${winner.name}!`, cx, cy - 30);
+    } else {
+      ctx.fillStyle = '#fff'; ctx.font = '700 48px system-ui,sans-serif';
+      ctx.fillText('¡Empate!', cx, cy - 30);
+    }
+    ctx.fillStyle = '#bbb'; ctx.font = '16px system-ui,sans-serif';
+    if (mode === 'local' && !touchMode()) ctx.fillText('Presiona 0 para jugar otra vez · Esc para cambiar de personaje', cx, cy + 25);
+    else if (mode === 'host' && !touchMode()) ctx.fillText('Presiona 0 para jugar otra vez', cx, cy + 25);
+    else if (mode === 'client') ctx.fillText('Esperando a que el anfitrión decida…', cx, cy + 40);
+    for (const b of overButtons()) drawBtn(b.x, b.y, b.w, b.h, b.label, b.fill);
+    ctx.textAlign = 'left';
+  }
+}
+
+function render(){
+  if (state === 'menu' || state === 'lobby') return;
+  if (mode === 'local'){
+    if (state === 'hub'){ drawHub(); return; }
+    drawView(players[0], 0);
+    drawView(players[1], VW);
+    ctx.fillStyle = '#888'; ctx.fillRect(VW - 1, 0, 2, VH);
+    drawOverlays();
+    return;
+  }
+  if (!players.length) return;
+  const me = players[myIndex] || players[0];
+  const vp = me.dead ? (players.find(q => !q.dead) || me) : me;
+  drawView(vp, 0, false);
+  if (!me.dead) drawHUD(me, 0);
+  else {
+    ctx.save();
+    ctx.fillStyle = '#ff6b6b'; ctx.font = `700 ${16 * HS}px system-ui,sans-serif`;
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    ctx.fillText(`Eliminado — espectando a ${vp.name}`, 14 * HS, 22 * HS);
+    ctx.restore();
+  }
+  drawScoreboard();
+  drawOverlays();
+}
+
+// =====================================================================
+//  CONTROLES TÁCTILES Y PANTALLA COMPLETA
+// =====================================================================
+const stage = el('stage');
+const touchEl = el('touch');
+const sysEl = el('sys');
+const uPx = () => stage.clientWidth / LW;
+function setU(){ stage.style.setProperty('--u', uPx() + 'px'); }
+function place(node, x, y, w, h){
+  node.style.left = `calc(var(--u) * ${x})`; node.style.top = `calc(var(--u) * ${y})`;
+  if (w !== undefined){ node.style.width = `calc(var(--u) * ${w})`; node.style.height = `calc(var(--u) * ${h})`; }
+}
+function mkBtn(parent, x, y, size, label, cls){
+  const d = document.createElement('div');
+  d.className = 'tb ' + (cls || '');
+  d.textContent = label;
+  place(d, x, y, size, size);
+  d.style.fontSize = `calc(var(--u) * ${Math.round(size * 0.42)})`;
+  parent.appendChild(d);
+  return d;
+}
+function bindKey(d, code){
+  let t0 = 0;
+  d.addEventListener('pointerdown', e => {
+    e.preventDefault(); try { d.setPointerCapture(e.pointerId); } catch (_) {}
+    keys[code] = true; once.add(code); d.classList.add('on'); t0 = performance.now();
+  });
+  const up = () => {
+    d.classList.remove('on');
+    const wait = 60 - (performance.now() - t0);
+    if (wait > 0) setTimeout(() => { keys[code] = false; }, wait); else keys[code] = false;
+  };
+  d.addEventListener('pointerup', up); d.addEventListener('pointercancel', up);
+}
+function makeJoy(getP, zx, zy, zw, zh){
+  const zone = document.createElement('div'); zone.className = 'jz'; place(zone, zx, zy, zw, zh);
+  const baseEl = document.createElement('div'); baseEl.className = 'jb';
+  const knob = document.createElement('div'); knob.className = 'jk';
+  touchEl.appendChild(zone); touchEl.appendChild(baseEl); touchEl.appendChild(knob);
+  const BS = 150, KS = 64;
+  const put = (node, cx, cy, size) => place(node, cx - size / 2, cy - size / 2, size, size);
+  const idle = { x: zx + zw / 2, y: zy + zh / 2 + 40 };
+  const showIdle = () => { put(baseEl, idle.x, idle.y, BS); put(knob, idle.x, idle.y, KS); baseEl.style.opacity = .3; knob.style.opacity = .3; };
+  showIdle();
+  let id = null, ox = 0, oy = 0;
+  function upd(e){
+    const u = uPx(), r = stage.getBoundingClientRect(), Rr = BS * 0.5 * u;
+    let dx = e.clientX - ox, dy = e.clientY - oy;
+    const l = Math.hypot(dx, dy);
+    if (l > Rr){ dx *= Rr / l; dy *= Rr / l; }
+    put(knob, (ox - r.left) / u + dx / u, (oy - r.top) / u + dy / u, KS);
+    let vx = dx / Rr, vy = dy / Rr;
+    if (Math.hypot(vx, vy) < 0.18){ vx = 0; vy = 0; }
+    const p = getP(); if (p) p.joy = { x: vx, y: vy };
+  }
+  zone.addEventListener('pointerdown', e => {
+    if (id !== null) return;
+    e.preventDefault(); id = e.pointerId; try { zone.setPointerCapture(id); } catch (_) {}
+    ox = e.clientX; oy = e.clientY;
+    const u = uPx(), r = stage.getBoundingClientRect();
+    put(baseEl, (ox - r.left) / u, (oy - r.top) / u, BS);
+    baseEl.style.opacity = .65; knob.style.opacity = .8;
+    upd(e);
+  });
+  zone.addEventListener('pointermove', e => { if (e.pointerId === id) upd(e); });
+  const end = e => { if (e.pointerId !== id) return; id = null; const p = getP(); if (p) p.joy = null; showIdle(); };
+  zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end);
+}
+
+function tryFS(){
+  const d = document.documentElement;
+  if (d.requestFullscreen && !document.fullscreenElement){
+    d.requestFullscreen().then(() => {
+      if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+    }).catch(() => {});
+  }
+}
+function toggleFS(){
+  if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); else tryFS();
+}
+
+function buildTouch(){
+  touchEl.innerHTML = ''; sysEl.innerHTML = '';
+  if (mode !== 'local' && mode !== 'host' && mode !== 'client') return;
+  const SM = 62, GAP = 6, FIRE = 120;
+  const acts = [
+    ['reload','↻'], ['swap','🔫'], ['nade','💣'], ['heal','➕'],
+    ['wire','🧵'], ['turret','🏗'], ['mine','⛏']
+  ];
+  if (mode === 'local'){
+    players.forEach((p, i) => {
+      const mx = (x, w) => i === 0 ? x : 1280 - x - w;     // espejo para el jugador 2
+      bindKey(mkBtn(touchEl, mx(500, FIRE), 640 - 30 - FIRE, FIRE, '🔥', 'fire'), p.ctl.shoot[0]);
+      acts.forEach(([act, label], k) => {
+        const col = k % 4, row = Math.floor(k / 4);
+        const x = 215 + col * (SM + GAP), y = 640 - 30 - SM - row * (SM + GAP);
+        bindKey(mkBtn(touchEl, mx(x, SM), y, SM, label), p.ctl[act][0]);
+      });
+      const zw = 215;
+      makeJoy(() => players[i], i === 0 ? 0 : 1280 - zw, 320, zw, 320);
+    });
+  } else {
+    bindKey(mkBtn(touchEl, LW - 30 - FIRE, LH - 30 - FIRE, FIRE, '🔥', 'fire'), ONLINE_CTL.shoot[0]);
+    acts.forEach(([act, label], k) => {
+      const col = k % 4, row = Math.floor(k / 4);
+      const x = LW - 226 - (3 - col) * (SM + GAP), y = LH - 30 - SM - row * (SM + GAP);
+      bindKey(mkBtn(touchEl, x, y, SM, label), ONLINE_CTL[act][0]);
+    });
+    makeJoy(() => players[myIndex], 0, Math.round(LH * 0.42), 330, Math.round(LH * 0.58));
+  }
+  buildSys();
+}
+function buildSys(){
+  sysEl.innerHTML = '';
+  const mk = (x, y, label, fn) => {
+    const d = mkBtn(sysEl, x, y, 48, label, 'sysb');
+    d.addEventListener('click', e => { e.preventDefault(); fn(); });
+  };
+  const fsOk = !!document.documentElement.requestFullscreen;
+  if (mode === 'local'){
+    // botones del sistema en el centro, sobre la línea que divide las dos vistas
+    if (fsOk) mk(616, 208, '⛶', toggleFS);
+    mk(616, 264, '☰', () => toHub());
+    mk(616, 320, '↻', () => { if (state !== 'hub') reset(); });
+    mk(616, 376, '⌂', () => toMenu());
+  } else {
+    const cx = LW / 2;
+    if (fsOk) mk(cx - 52, 8, '⛶', toggleFS);
+    mk(fsOk ? cx + 4 : cx - 24, 8, '☰', () => { if (confirm('¿Salir de la partida?')) toMenu(); });
+  }
+}
+let uiHidden = null;
+function syncTouchUI(){
+  const hide = state === 'hub' || state === 'menu' || state === 'lobby';
+  if (hide === uiHidden) return;
+  uiHidden = hide;
+  touchEl.style.visibility = hide ? 'hidden' : 'visible';
+  sysEl.style.visibility = hide ? 'hidden' : 'visible';
+}
+
+// =====================================================================
+//  RED: ANFITRIÓN (autoridad) Y CLIENTES
+// =====================================================================
+const net = { peer: null, code: '', max: 4, started: false, lobby: null, hostConn: null,
+  sid: 0, timer: null, inAcc: 0, pend: new Set(), snapAcc: 0, myChar: 1 };
+const r1 = v => Math.round(v * 10) / 10;
+const r2 = v => Math.round(v * 100) / 100;
+const num = (v, lo, hi) => { v = +v; if (!isFinite(v)) return 0; return Math.max(lo, Math.min(hi, v)); };
+const cleanName = s => String(s || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 12);
+const clampChar = c => { c = Math.floor(+c); return c >= 0 && c < CHARS.length ? c : 0; };
+const rndCode = () => { let s = ''; for (let i = 0; i < NET.CODE_LEN; i++) s += NET.CODE_CHARS[Math.floor(Math.random() * NET.CODE_CHARS.length)]; return s; };
+const playerName = () => cleanName(el('iName').value) || 'Jugador';
+function errText(err){
+  const t = err && err.type;
+  return ({
+    'network': 'Sin conexión con el servidor de salas.',
+    'server-error': 'El servidor de salas no responde.',
+    'socket-error': 'Error de conexión con el servidor de salas.',
+    'socket-closed': 'Se cerró la conexión con el servidor de salas.',
+    'browser-incompatible': 'Tu navegador no soporta conexiones en línea (WebRTC).',
+    'webrtc': 'Falló la conexión directa (WebRTC). Prueba con otra red.',
+    'peer-unavailable': 'No existe una sala con ese código.'
+  })[t] || ('Error de conexión' + (t ? ': ' + t : ''));
+}
+function setStatus(msg, bad){ const s = el('mStatus'); s.textContent = msg || ''; s.className = 'status' + (bad ? ' bad' : ''); }
+function showPanel(id){ for (const n of document.querySelectorAll('.mp')) n.hidden = n.id !== id; }
+function hasPeer(){
+  if (typeof Peer === 'undefined'){ setStatus('No se pudo cargar la librería de conexión (PeerJS). Revisa tu internet y recarga la página.', true); return false; }
+  return true;
+}
+function closeNet(){
+  net.sid++;
+  clearTimeout(net.timer);
+  for (const p of players) if (p.conn){ try { p.conn.close(); } catch (_) {} p.conn = null; }
+  if (net.hostConn){ try { net.hostConn.close(); } catch (_) {} }
+  if (net.peer){ try { net.peer.destroy(); } catch (_) {} }
+  net.peer = null; net.hostConn = null; net.started = false; net.lobby = null; net.pend.clear(); net.inAcc = 0; net.snapAcc = 0;
+}
+
+function fitOnlineCanvas(){
+  const asp = Math.min(2.4, Math.max(1.25, innerWidth / Math.max(1, innerHeight)));
+  const H = 720, W = Math.round(H * asp);
+  if (cv.width !== W) cv.width = W;
+  if (cv.height !== H) cv.height = H;
+  VW = W; VH = H; LW = W; LH = H; setU();
+}
+function enterGameUI(){
+  body.classList.remove('in-menu', 'm-local'); body.classList.add('m-online');
+  fitOnlineCanvas(); buildTouch();
+}
+function toMenu(msg, bad){
+  closeNet();
+  mode = 'menu'; state = 'menu'; players = [];
+  bullets = []; grenades = []; explosions = []; wires = []; turrets = []; mines = []; pickups = [];
+  body.classList.add('in-menu'); body.classList.remove('m-online', 'm-local');
+  cv.width = 1280; cv.height = 640; VW = 640; VH = 640; LW = 1280; LH = 640; setU();
+  touchEl.innerHTML = ''; sysEl.innerHTML = '';
+  showPanel('pMain'); setStatus(msg || '', bad);
+  try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch (_) {}
+}
+function startLocal(){
+  closeNet();
+  mode = 'local';
+  players = [makePlayer(0, P1_CTL), makePlayer(1, P2_CTL)];
+  body.classList.remove('in-menu', 'm-online'); body.classList.add('m-local');
+  cv.width = 1280; cv.height = 640; VW = 640; VH = 640; LW = 1280; LH = 640; setU();
+  toHub(); buildTouch();
+}
+
+// ---------- Anfitrión ----------
+function hostCreate(){
+  if (!hasPeer()) return;
+  closeNet();
+  mode = 'host'; state = 'lobby'; myIndex = 0;
+  players = [makePlayer(0, ONLINE_CTL)];
+  players[0].name = playerName(); players[0].char = net.myChar;
+  const sid = net.sid;
+  let tries = 0;
+  const open = () => {
+    net.code = rndCode();
+    setStatus('Creando sala…');
+    const peer = new Peer(NET.PREFIX + net.code, NET.PEER_OPTIONS);
+    net.peer = peer;
+    peer.on('open', () => { if (sid !== net.sid) return; setStatus(''); showPanel('pLobby'); renderLobby(); });
+    peer.on('connection', conn => { if (sid === net.sid) hostOnConnection(conn, sid); });
+    peer.on('disconnected', () => { if (sid === net.sid) { try { peer.reconnect(); } catch (_) {} } });
+    peer.on('error', err => {
+      if (sid !== net.sid) return;
+      if (err && err.type === 'unavailable-id' && tries++ < 6){ try { peer.destroy(); } catch (_) {} open(); return; }
+      toMenu(errText(err), true); showPanel('pOnline'); setStatus(errText(err), true);
+    });
+  };
+  open();
+}
+function lobbyList(){ return players.map(p => ({ name: p.name, char: p.char, color: p.color })); }
+function broadcastLobby(){
+  const list = lobbyList();
+  for (const p of players){
+    if (p.remote && p.conn && p.conn.open){
+      try { p.conn.send({ t: 'lobby', you: p.i, max: net.max, code: net.code, players: list }); } catch (_) {}
+    }
+  }
+  renderLobby();
+}
+function hostOnConnection(conn, sid){
+  conn.on('open', () => {
+    if (sid !== net.sid) return;
+    if (net.started || players.length >= net.max){
+      try { conn.send({ t: 'full' }); } catch (_) {}
+      setTimeout(() => { try { conn.close(); } catch (_) {} }, 400);
+      return;
+    }
+    const p = makePlayer(players.length, null);
+    p.remote = true; p.conn = conn; p.netIn = newNetIn(); p.name = 'Jugador ' + (p.i + 1);
+    players.push(p);
+    conn.on('data', m => { if (sid === net.sid) hostOnData(p, m); });
+    conn.on('close', () => { if (sid === net.sid) hostOnLeave(p); });
+    conn.on('error', () => { if (sid === net.sid) hostOnLeave(p); });
+    broadcastLobby();
+  });
+}
+function hostOnData(p, m){
+  if (!m || typeof m !== 'object' || p.left) return;
+  if (m.t === 'hello'){
+    let n = cleanName(m.name) || ('Jugador ' + (p.i + 1));
+    if (players.some(q => q !== p && q.name === n)) n = (n.slice(0, 10) + ' ' + (p.i + 1));
+    p.name = n; p.char = clampChar(m.char);
+    if (!net.started) broadcastLobby();
+  } else if (m.t === 'char'){
+    p.char = clampChar(m.char);
+    if (!net.started) broadcastLobby();
+  } else if (m.t === 'in' && p.netIn){
+    const c = p.netIn.c;
+    c.mx = num(m.mx, -1, 1); c.my = num(m.my, -1, 1); c.sp = num(m.sp, 0, 1);
+    c.shoot = !!m.sh; c.reload = !!m.rl;
+    if (Array.isArray(m.e)) for (const k of m.e) if (EDGES.includes(k)) p.netIn.e[k] = true;
+  }
+}
+function hostOnLeave(p){
+  if (p.left) return;
+  p.left = true;
+  if (!net.started){
+    players = players.filter(q => q !== p);
+    players.forEach((q, i) => { q.i = i; q.color = SLOTS[i].color; q.sx = SLOTS[i].sx * T; q.sy = SLOTS[i].sy * T; q.aim0 = SLOTS[i].aim0; });
+    broadcastLobby();
+  } else {
+    p.lives = 0; p.hp = 0; p.dead = true; p.name += ' (salió)';
+    checkEnd();
+  }
+}
+function hostStart(){
+  if (mode !== 'host' || net.started || players.length < 2) return;
+  net.started = true;
+  const list = lobbyList();
+  reset();
+  enterGameUI();
+  for (const p of players) if (p.remote && p.conn && p.conn.open){
+    try { p.conn.send({ t: 'start', you: p.i, players: list }); } catch (_) {}
+  }
+}
+function hostRematch(){ if (mode === 'host' && state === 'over') reset(); }
+
+function packPlayer(p){
+  return { x: r1(p.x), y: r1(p.y), aim: r2(p.aim), hp: Math.round(p.hp), lives: p.lives, dead: p.dead ? 1 : 0,
+    vest: p.vest ? 1 : 0, inv: r2(p.inv), flash: r2(p.flash), heal: r2(p.heal), mag: p.mag, reserve: p.reserve,
+    reload: r2(p.reload), special: p.special, nades: p.nades, wires: p.wires, turrets: p.turrets, mines: p.mines,
+    medkits: p.medkits, healT: r2(p.healT), weapon: p.weapon, wireA: p.wireA ? { x: r1(p.wireA.x), y: r1(p.wireA.y) } : null,
+    msg: p.msg, msgT: r2(p.msgT), cd: r2(p.cd) };
+}
+function buildSnap(){
+  return {
+    t: 'snap', st: state, ct: r2(countT), gt: r2(goT), win: winner ? winner.i : -1,
+    pl: players.map(packPlayer),
+    bl: bullets.map(b => ({ x: r1(b.x), y: r1(b.y), vx: r1(b.vx), vy: r1(b.vy), k: b.kind, o: b.owner.i })),
+    gr: grenades.map(g => ({ x: r1(g.x), y: r1(g.y), f: r2(g.fuse) })),
+    ex: explosions.map(e => ({ x: r1(e.x), y: r1(e.y), r: e.r, t: r2(e.t) })),
+    wi: wires.map(w => ({ ax: r1(w.ax), ay: r1(w.ay), bx: r1(w.bx), by: r1(w.by), o: w.owner.i })),
+    tu: turrets.map(t => ({ x: r1(t.x), y: r1(t.y), o: t.owner.i, hp: Math.round(t.hp), life: r1(t.life), aim: r2(t.aim) })),
+    pk: pickups.map(m => ({ k: m.type, x: r1(m.x), y: r1(m.y) })),
+    sp: { mg: { x: r1(specials.mg.x), y: r1(specials.mg.y), s: specials.mg.state }, rb: { x: r1(specials.rb.x), y: r1(specials.rb.y), s: specials.rb.state } }
+  };
+}
+function hostNetTick(dt){
+  net.snapAcc += dt;
+  if (net.snapAcc < 1 / NET.SNAP_HZ || !net.started) return;
+  net.snapAcc = 0;
+  const snap = buildSnap();
+  for (const p of players){
+    if (!p.remote || !p.conn || !p.conn.open) continue;
+    // las minas solo las ve su dueño
+    snap.mn = mines.filter(m => m.owner === p).map(m => ({ x: r1(m.x), y: r1(m.y), o: m.owner.i, arm: r2(m.arm) }));
+    try { p.conn.send(snap); } catch (_) {}
+  }
+}
+
+// ---------- Cliente ----------
+function clientJoin(code){
+  if (!hasPeer()) return;
+  closeNet();
+  mode = 'client'; state = 'lobby';
+  const sid = net.sid;
+  setStatus('Conectando…');
+  const fail = msg => { if (sid !== net.sid) return; toMenu(); showPanel('pOnline'); setStatus(msg, true); };
+  net.timer = setTimeout(() => fail('No se pudo conectar con la sala. Revisa el código y tu conexión.'), 15000);
+  const peer = new Peer(undefined, NET.PEER_OPTIONS);
+  net.peer = peer;
+  peer.on('open', () => {
+    if (sid !== net.sid) return;
+    const conn = peer.connect(NET.PREFIX + code, { reliable: true, serialization: 'json' });
+    net.hostConn = conn;
+    conn.on('open', () => {
+      if (sid !== net.sid) return;
+      clearTimeout(net.timer);
+      conn.send({ t: 'hello', name: playerName(), char: net.myChar });
+    });
+    conn.on('data', m => { if (sid === net.sid) clientOnData(m); });
+    conn.on('close', () => { if (sid === net.sid) toMenu('La sala se cerró o perdiste la conexión.', true); });
+    conn.on('error', () => { if (sid === net.sid) fail('Error en la conexión con la sala.'); });
+  });
+  peer.on('error', err => fail(errText(err)));
+}
+function clientOnData(m){
+  if (!m || typeof m !== 'object') return;
+  if (m.t === 'lobby'){
+    net.lobby = m; myIndex = m.you; net.max = m.max; net.code = m.code;
+    showPanel('pLobby'); setStatus(''); renderLobby();
+  } else if (m.t === 'full'){
+    const sid = net.sid; toMenu(); showPanel('pOnline'); setStatus('La sala está llena o ya empezó la partida.', true);
+  } else if (m.t === 'start'){
+    myIndex = m.you;
+    players = m.players.map((d, i) => {
+      const p = makePlayer(i, i === m.you ? ONLINE_CTL : null);
+      p.name = d.name; p.char = d.char; p.color = d.color; p.lives = MAX_LIVES; p.hp = HP_MAX; p.init = false;
+      p.mag = MAG_SIZE; p.reserve = RESERVE_MAGS; p.reload = 0; p.special = null; p.nades = START_NADES;
+      p.wires = 0; p.turrets = 0; p.mines = 0; p.medkits = 0; p.healT = 0; p.weapon = 'pistol';
+      p.inv = 0; p.flash = 0; p.heal = 0; p.msg = ''; p.msgT = 0; p.cd = 0; p.vest = false; p.wireA = null;
+      return p;
+    });
+    bullets = []; grenades = []; explosions = []; wires = []; turrets = []; mines = []; pickups = [];
+    state = 'count'; winner = null; countT = COUNTDOWN;
+    enterGameUI();
+  } else if (m.t === 'snap'){
+    if (players.length) applySnap(m);
+  }
+}
+function applySnap(m){
+  state = m.st; countT = m.ct; goT = m.gt;
+  m.pl.forEach((d, i) => {
+    const p = players[i]; if (!p) return;
+    const { x, y, aim, ...rest } = d;
+    Object.assign(p, rest);
+    p.dead = !!rest.dead; p.vest = !!rest.vest;
+    if (i === myIndex){
+      if (!p.init || state !== 'play' || p.dead){ p.x = x; p.y = y; p.aim = aim; p.init = true; }
+      else {
+        const dx = x - p.x, dy = y - p.y;
+        if (Math.hypot(dx, dy) > 60){ p.x = x; p.y = y; } else { p.x += dx * 0.2; p.y += dy * 0.2; }
+        p.aim += angNorm(aim - p.aim) * 0.2;
+      }
+    } else {
+      p.tx = x; p.ty = y; p.taim = aim;
+      if (!p.init || state !== 'play'){ p.x = x; p.y = y; p.aim = aim; p.init = true; }
+    }
+  });
+  winner = m.win >= 0 ? players[m.win] || null : null;
+  bullets = m.bl.map(b => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, kind: b.k, owner: players[b.o] }));
+  grenades = m.gr.map(g => ({ x: g.x, y: g.y, fuse: g.f }));
+  explosions = m.ex.map(e => ({ x: e.x, y: e.y, r: e.r, t: e.t }));
+  wires = m.wi.map(w => ({ ax: w.ax, ay: w.ay, bx: w.bx, by: w.by, owner: players[w.o] }));
+  turrets = m.tu.map(t => ({ x: t.x, y: t.y, owner: players[t.o], hp: t.hp, life: t.life, aim: t.aim }));
+  mines = (m.mn || []).map(n => ({ x: n.x, y: n.y, owner: players[n.o], arm: n.arm }));
+  pickups = m.pk.map(k => ({ type: k.k, x: k.x, y: k.y }));
+  for (const k of ['mg', 'rb']){ specials[k].x = m.sp[k].x; specials[k].y = m.sp[k].y; specials[k].state = m.sp[k].s; }
+}
+function clientFrame(dt){
+  clock += dt;
+  if (goT > 0) goT -= dt;
+  if (state === 'count') countT = Math.max(0, countT - dt);
+  const me = players[myIndex];
+  if (!me) return;
+  const inp = localInput(me);
+  // predicción de mi propio movimiento (el anfitrión corrige si hace falta)
+  if (state === 'play' && !me.dead && (inp.mx || inp.my)){
+    tryMove(me, inp.mx * SPEED * inp.sp * dt, 0);
+    tryMove(me, 0, inp.my * SPEED * inp.sp * dt);
+    const diff = angNorm(Math.atan2(inp.my, inp.mx) - me.aim);
+    const maxTurn = TURN_SPEED * dt;
+    me.aim += Math.abs(diff) <= maxTurn ? diff : Math.sign(diff) * maxTurn;
+  }
+  // enviar controles
+  for (const k of EDGES) if (inp[k]) net.pend.add(k);
+  net.inAcc += dt;
+  if (net.hostConn && net.hostConn.open && (net.pend.size || net.inAcc >= 1 / NET.INPUT_HZ)){
+    try { net.hostConn.send({ t: 'in', mx: r2(inp.mx), my: r2(inp.my), sp: r2(inp.sp), sh: inp.shoot ? 1 : 0, rl: inp.reload ? 1 : 0, e: [...net.pend] }); } catch (_) {}
+    net.pend.clear(); net.inAcc = 0;
+  }
+  // suavizado y avance local entre snapshots
+  const k = Math.min(1, dt * 14);
+  for (const p of players){
+    p.flash = Math.max(0, (p.flash || 0) - dt); p.heal = Math.max(0, (p.heal || 0) - dt);
+    p.inv = Math.max(0, (p.inv || 0) - dt); p.msgT = (p.msgT || 0) - dt;
+    p.reload = Math.max(0, (p.reload || 0) - dt); p.healT = Math.max(0, (p.healT || 0) - dt);
+    if (p !== me && p.init && p.tx !== undefined){
+      p.x += (p.tx - p.x) * k; p.y += (p.ty - p.y) * k; p.aim += angNorm(p.taim - p.aim) * k;
+    }
+  }
+  for (const b of bullets){ b.x += b.vx * dt; b.y += b.vy * dt; }
+  for (const g of grenades) g.fuse -= dt;
+  for (const e of explosions) e.t += dt;
+  explosions = explosions.filter(e => e.t < 0.4);
+}
+
+// =====================================================================
+//  MENÚ Y SALA DE ESPERA (HTML)
+// =====================================================================
+function h(tag, cls, text){ const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
+function lobbyView(){
+  if (mode === 'host') return players.map((p, i) => ({ name: p.name, char: p.char, color: p.color, you: i === 0, host: i === 0 }));
+  const L = net.lobby; if (!L) return [];
+  return L.players.map((p, i) => ({ name: p.name, char: p.char, color: p.color, you: i === L.you, host: i === 0 }));
+}
+function charThumb(k, color){
+  if (k === 0){ const c = h('div', 'circ'); c.style.background = color; return c; }
+  const i = h('img'); i.src = CHARS[k].img.src; i.alt = CHARS[k].name; return i;
+}
+function setMyChar(k){
+  net.myChar = k;
+  if (mode === 'host'){ players[0].char = k; broadcastLobby(); }
+  else if (net.hostConn && net.hostConn.open){ try { net.hostConn.send({ t: 'char', char: k }); } catch (_) {} }
+}
+function renderLobby(){
+  el('codeText').textContent = net.code || '·····';
+  const list = el('lobbyList'); list.innerHTML = '';
+  const rows = lobbyView();
+  rows.forEach(r => {
+    const row = h('div', 'prow');
+    const dot = h('span', 'dot'); dot.style.background = r.color; row.appendChild(dot);
+    row.appendChild(h('span', 'pname', r.name + (r.host ? ' (anfitrión)' : '') + (r.you ? ' — tú' : '')));
+    if (r.you){
+      const pick = h('div', 'pick');
+      CHARS.forEach((c, k) => {
+        const b = h('button', k === r.char ? 'sel' : ''); b.title = c.name; b.appendChild(charThumb(k, r.color));
+        b.addEventListener('click', () => setMyChar(k));
+        pick.appendChild(b);
+      });
+      row.appendChild(pick);
+    } else {
+      const chip = h('div', 'chip'); chip.appendChild(charThumb(r.char, r.color)); row.appendChild(chip);
+    }
+    list.appendChild(row);
+  });
+  for (let i = rows.length; i < net.max; i++){
+    const row = h('div', 'prow empty'); const dot = h('span', 'dot'); dot.style.background = SLOTS[i].color; row.appendChild(dot);
+    row.appendChild(h('span', 'pname', 'Esperando jugador…')); list.appendChild(row);
+  }
+  const isHost = mode === 'host';
+  el('bStart').hidden = !isHost;
+  el('bStart').disabled = !(isHost && players.length >= 2);
+  el('shareBtns').hidden = !net.code;
+  el('lobbyInfo').textContent = isHost
+    ? (players.length < 2 ? `Comparte el código. Jugadores: ${players.length}/${net.max} (mínimo 2 para empezar)` : `Jugadores: ${players.length}/${net.max} — puedes iniciar cuando quieras`)
+    : 'Esperando a que el anfitrión inicie la partida…';
+}
+function shareLink(){ return location.href.split('#')[0].split('?')[0] + '?sala=' + net.code; }
+function copyText(txt){
+  if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(txt).catch(() => window.prompt('Copia esto:', txt));
+  window.prompt('Copia esto:', txt);
+}
+
+el('bLocal').addEventListener('click', startLocal);
+el('bOnline').addEventListener('click', () => { showPanel('pOnline'); setStatus(''); });
+el('bBack1').addEventListener('click', () => { showPanel('pMain'); setStatus(''); });
+for (const b of el('segMax').querySelectorAll('button')){
+  b.addEventListener('click', () => {
+    net.max = +b.dataset.n;
+    for (const o of el('segMax').querySelectorAll('button')) o.classList.toggle('sel', o === b);
+  });
+}
+function saveName(){ try { localStorage.setItem('cqb-name', cleanName(el('iName').value)); } catch (_) {} }
+el('bCreate').addEventListener('click', () => { saveName(); tryFS(); hostCreate(); });
+el('bJoin').addEventListener('click', () => {
+  const code = el('iCode').value.trim().toUpperCase();
+  if (code.length !== NET.CODE_LEN){ setStatus('Escribe el código de ' + NET.CODE_LEN + ' caracteres.', true); return; }
+  saveName(); tryFS(); clientJoin(code);
+});
+el('iCode').addEventListener('input', () => {
+  el('iCode').value = el('iCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+});
+el('bStart').addEventListener('click', () => { tryFS(); hostStart(); });
+el('bLeave').addEventListener('click', () => toMenu());
+el('bCopy').addEventListener('click', () => copyText(net.code));
+el('bShare').addEventListener('click', () => {
+  const url = shareLink();
+  if (navigator.share) navigator.share({ title: 'Círculos CQB', text: 'Únete a mi sala: ' + net.code, url }).catch(() => {});
+  else copyText(url);
+});
+el('rb').addEventListener('click', e => { if (mode === 'local' && state !== 'hub') reset(); e.target.blur(); });
+el('hb').addEventListener('click', e => { if (mode === 'local') toHub(); e.target.blur(); });
+el('mb').addEventListener('click', e => { toMenu(); e.target.blur(); });
+try { el('iName').value = localStorage.getItem('cqb-name') || ''; } catch (_) {}
+(function(){   // enlace compartido: ?sala=CODIGO
+  let q = ''; try { q = (new URLSearchParams(location.search).get('sala') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, NET.CODE_LEN); } catch (_) {}
+  if (q){ el('iCode').value = q; showPanel('pOnline'); }
+})();
+
+// =====================================================================
+//  TECLADO, TOQUES EN EL CANVAS Y BUCLE PRINCIPAL
+// =====================================================================
+addEventListener('keydown', e => {
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  if (!e.repeat) once.add(e.code);
+  keys[e.code] = true;
+  if (handled.has(e.code) && state !== 'menu' && state !== 'lobby') e.preventDefault();
+  const zero = e.code === 'Digit0' || e.code === 'Numpad0';
+  if (mode === 'local'){
+    if (zero && state !== 'hub') reset();
+    if (e.code === 'Escape') toHub();
+  } else if (mode === 'host' && zero) hostRematch();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+addEventListener('visibilitychange', () => { for (const k in keys) keys[k] = false; });
+addEventListener('contextmenu', e => { if (touchMode()) e.preventDefault(); });
+
+const inRect = (x, y, rx, ry, rw, rh) => x >= rx && x <= rx + rw && y >= ry && y <= ry + rh;
+cv.addEventListener('pointerup', e => {
+  const r = cv.getBoundingClientRect();
+  const x = (e.clientX - r.left) * cv.width / r.width, y = (e.clientY - r.top) * cv.height / r.height;
+  if (mode === 'local' && state === 'hub'){
+    if (inRect(x, y, 540, 604, 200, 32) && touchMode()){ toggleFS(); return; }
+    players.forEach((p, i) => {
+      const cx = 320 + i * 640;
+      if (inRect(x, y, cx - 130, 505, 260, 50)){ p.ready = !p.ready; return; }
+      if (p.ready) return;
+      if (Math.hypot(x - (cx - 215), y - 300) < 60) p.char = (p.char + CHARS.length - 1) % CHARS.length;
+      else if (Math.hypot(x - (cx + 215), y - 300) < 60 || inRect(x, y, cx - 130, 160, 260, 280)) p.char = (p.char + 1) % CHARS.length;
+    });
+    return;
+  }
+  if (state === 'over'){
+    for (const b of overButtons()) if (inRect(x, y, b.x, b.y, b.w, b.h)){
+      if (b.act === 'again'){ if (mode === 'local') reset(); else hostRematch(); }
+      else if (b.act === 'hub') toHub();
+      else if (b.act === 'menu') toMenu();
+      return;
+    }
+  }
+});
+
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(setU).observe(stage);
+let resizeT = null;
+function onResize(){
+  clearTimeout(resizeT);
+  resizeT = setTimeout(() => {
+    if ((mode === 'host' || mode === 'client') && !body.classList.contains('in-menu')){ fitOnlineCanvas(); buildTouch(); }
+    else setU();
+  }, 150);
+}
+addEventListener('resize', onResize); addEventListener('orientationchange', onResize);
+setU();
+
+let last = performance.now();
+function loop(now){
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  if (mode === 'client') clientFrame(dt);
+  else if (mode === 'local' || mode === 'host'){ update(dt); if (mode === 'host') hostNetTick(dt); }
+  syncTouchUI();
+  once.clear();
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
